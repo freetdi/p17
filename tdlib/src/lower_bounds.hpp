@@ -91,6 +91,10 @@
 #include "network_flow.hpp"
 #include "simple_graph_algos.hpp"
 #include "algo.hpp"
+#include "trace.hpp"
+#include "degree_config.hpp"
+
+#include "impl/greedy_base.hpp"
 
 namespace treedec{
 
@@ -112,7 +116,7 @@ public:
 
         typename boost::graph_traits<G_t>::vertex_iterator vIt, vEnd;
         for(boost::tie(vIt, vEnd) = boost::vertices(_g); vIt != vEnd; vIt++){
-            unsigned degree = boost::degree(*vIt, _g);
+            unsigned degree = boost::out_degree(*vIt, _g);
             _lb = (degree < _lb)? degree : _lb;
         }
 
@@ -160,7 +164,7 @@ public:
 
         typename boost::graph_traits<G_t>::vertex_iterator vIt, vEnd;
         for(boost::tie(vIt, vEnd) = boost::vertices(_g); vIt != vEnd; vIt++){
-            unsigned int degree = boost::degree(*vIt, _g);
+            unsigned int degree = boost::out_degree(*vIt, _g);
             if(degree <= min){
                 snd = min;
                 min = degree;
@@ -221,7 +225,7 @@ public:
         for(unsigned int i = 0; i < boost::num_vertices(_g); i++){
             for(unsigned int j = 0; j < i; j++){
                 if(!boost::edge(degree_sequence[i], degree_sequence[j], _g).second){
-                    _lb = boost::degree(degree_sequence[i], _g);
+                    _lb = boost::out_degree(degree_sequence[i], _g);
                     timer_off();
                     return;
                 }
@@ -282,7 +286,7 @@ public:
         while(true){
             unsigned int min_degree = boost::num_vertices(_g);
             for(boost::tie(vIt, vEnd) = boost::vertices(_g); vIt != vEnd; vIt++){
-                unsigned int degree = boost::degree(*vIt, _g);
+                unsigned int degree = boost::out_degree(*vIt, _g);
                 if(degree < min_degree && degree > 0){
                     min_degree = degree;
                     min_vertex = *vIt;
@@ -355,7 +359,7 @@ public:
                     if(*hIt == assumed_minimal[i]){
                         continue;
                     }
-                    unsigned int degree = boost::degree(*hIt, H);
+                    unsigned int degree = boost::out_degree(*hIt, H);
                     if(degree < min_degree && degree > 0){
                         min_degree = degree;
                         min_vertex = *hIt;
@@ -424,7 +428,7 @@ public:
                 }
 
                 //gammaD-left heuristic
-                unsigned int degree = boost::degree(degree_sequence[i], _g);
+                unsigned int degree = boost::out_degree(degree_sequence[i], _g);
                 for(unsigned int k = 0; k < i; k++){
                     boost::clear_vertex(degree_sequence[k], _g);
                 }
@@ -500,7 +504,7 @@ public:
                 }
 
                 //gammaD-right heuristic
-                unsigned int degree = boost::degree(degree_sequence[i], _g);
+                unsigned int degree = boost::out_degree(degree_sequence[i], _g);
                 boost::clear_vertex(degree_sequence[i], _g);
 
                 _lb = (degree > _lb)? degree : _lb;
@@ -574,10 +578,10 @@ public:
                 }
 
                 //gammaD-min-e heuristic
-                unsigned int degree_right = boost::degree(degree_sequence[i], _g);
+                unsigned int degree_right = boost::out_degree(degree_sequence[i], _g);
                 unsigned int degree_left = 0;
                 for(unsigned int k = 0; k < i; k++){
-                    degree_left += boost::degree(degree_sequence[k], _g);
+                    degree_left += boost::out_degree(degree_sequence[k], _g);
                 }
 
                 if(degree_left < degree_right){
@@ -653,7 +657,7 @@ public:
             typename boost::graph_traits<G_t>::vertex_descriptor min_vertex
                           = get_min_degree_vertex(_g, true); //ignore isolated vertices
 
-            _lb = (_lb>boost::degree(min_vertex, _g))? _lb : boost::degree(min_vertex, _g);
+            _lb = (_lb>boost::out_degree(min_vertex, _g))? _lb : boost::out_degree(min_vertex, _g);
 
             //min_d heuristic: Search a neighbour of min_vertex with minimal degree.
             typename boost::graph_traits<G_t>::adjacency_iterator nIt, nEnd;
@@ -662,14 +666,14 @@ public:
             boost::tie(nIt, nEnd) = boost::adjacent_vertices(min_vertex, _g);
             typename boost::graph_traits<G_t>::vertex_descriptor w = *nIt;
             for(; nIt != nEnd; nIt++){
-                unsigned int degree = boost::degree(*nIt, _g);
+                unsigned int degree = boost::out_degree(*nIt, _g);
                 if(degree <= min_degree_w){
                     min_degree_w = degree;
                     w = *nIt;
                 }
             }
 
-            contract_edge(min_vertex, w, _g, false);
+            contract_edge(min_vertex, w, _g);
         }
 
         timer_off();
@@ -724,7 +728,7 @@ public:
             typename boost::graph_traits<G_t>::vertex_descriptor min_vertex
                           = get_min_degree_vertex(_g, true); //ignore isolated vertices
 
-            _lb = (_lb>boost::degree(min_vertex, _g))? _lb : boost::degree(min_vertex, _g);
+            _lb = (_lb>boost::out_degree(min_vertex, _g))? _lb : boost::out_degree(min_vertex, _g);
 
             //min_d heuristic: Search a neighbour of min_vertex with minimal degree.
             typename boost::graph_traits<G_t>::adjacency_iterator nIt, nEnd;
@@ -733,14 +737,14 @@ public:
             boost::tie(nIt, nEnd) = boost::adjacent_vertices(min_vertex, _g);
             typename boost::graph_traits<G_t>::vertex_descriptor w = *nIt;
             for(; nIt != nEnd; nIt++){
-                unsigned int degree = boost::degree(*nIt, _g);
+                unsigned int degree = boost::out_degree(*nIt, _g);
                 if(degree > max_degree){
                     max_degree = degree;
                     w = *nIt;
                 }
             }
 
-            contract_edge(min_vertex, w, _g, false);
+            contract_edge(min_vertex, w, _g);
         }
 
         timer_off();
@@ -785,13 +789,14 @@ struct degree_decrease
    : public vertex_callback<typename boost::graph_traits<G_t>::vertex_descriptor>{
     typedef typename boost::graph_traits<G_t>::vertex_descriptor vertex_descriptor;
     typedef typename misc::DEGS<G_t>::bag_type degbag;
-    typedef typename deg_chooser<G_t>::type degs_type;
+    //typedef typename deg_chooser<G_t>::type degs_type;
+    typedef treedec::DEGS<G_t> degs_type; /// BUG
 
     degree_decrease(degs_type* d, G_t*g) :
         _degs(d), G(g){}
 
     void operator()(vertex_descriptor v){
-        size_t degree = boost::degree(v, *G);
+        size_t degree = boost::out_degree(v, *G);
         if(degree==0){
             // unreachable
             // unconnected nodes are unreachable throught adj iterator
@@ -816,80 +821,170 @@ private:
 
 namespace impl{
 
-template <typename G_t>
-class deltaC_least_c : public treedec::algo::draft::algo1{
+// TODO: move to impl, then use from lb/order
+template <typename G_t,
+          template<class G, class...> class CFGT=algo::default_config>
+class deltaC_least_c
+  : private treedec::impl::greedy_base<
+                 G_t,
+                 std::vector< typename boost::graph_traits<G_t>::vertex_descriptor >,
+                 CFGT>
+{
 public:
     typedef typename boost::graph_traits<G_t>::vertex_descriptor vertex_descriptor;
-    // pick from CFG? from graph?
-    // typedef typename treedec::graph_traits<G_t>::degs_type degs_type;
-    typedef treedec::DEGS<G_t> degs_type;
+    typedef typename boost::graph_traits<G_t>::vertices_size_type vertices_size_type;
+private:
+    typedef treedec::impl::greedy_base<
+                 G_t, std::vector<vertex_descriptor>, CFGT> baseclass;
 
-    deltaC_least_c(G_t &G) : algo1("lb::deltaC_least_c"), _g(G), _lb(0){}
+    using typename baseclass::graph_type;
+    // typedef typename deg_chooser<typename baseclass::graph_type>::type degs_type;
+    typedef DEGS<graph_type, ::treedec::degs::mapped_config> degs_type;
 
-    void do_it(){ untested();
-        timer_on();
+    using typename baseclass::marker_type;
+    using baseclass::_g;
+    using baseclass::_marker;
+    using baseclass::_numbering;
+    using baseclass::_degreemap;
+    using baseclass::_subgraph;
+    using baseclass::_num_edges;
+public:
 
-        assert(!boost::is_directed(_g));
+    deltaC_least_c(G_t &G)
+      : baseclass(G, -1u),
+//        _g(G), // baseclass _g?
+        _lb_tw(0)
+    { untested();
+        trace2("deltacleastc", boost::num_vertices(G), boost::num_edges(G));
+    }
 
-        degs_type degs(_g);
-        degree_decrease<G_t> cb(&degs, &_g);
+    void do_it(){
+
+#ifndef NDEBUG
+        auto p=boost::vertices(_g);
+        for(; p.first!=p.second; ++p.first){
+            assert(_degreemap[*p.first] == boost::out_degree(*p.first, _g));
+        }
+#endif
+
+        degs_type degs(_g, baseclass::_degreemap);
+//        degree_decrease<graph_type> cb(&degs, &_g);
 
         unsigned int min_ntd = 2;
 
-        trace1("dclc loop", boost::num_vertices(_g));
-        while(boost::num_edges(_g) > 0){ untested();
+        while(_num_edges){
             //Search a minimum-degree-vertex.
             if(min_ntd>1){
                 --min_ntd;
             }
 
-            std::pair<vertex_descriptor, unsigned> min_pair;
+            std::pair<vertex_descriptor, vertices_size_type> min_pair;
             min_pair = degs.pick_min(min_ntd);
             min_ntd = min_pair.second;
-            assert(min_ntd == boost::degree(min_pair.first, _g));
-            trace2("dclc loop", min_pair.first, min_pair.second);
+            trace2("dclc", min_pair.first, min_ntd);
 
-            if(_lb < min_ntd){
-                _lb = min_ntd;
+            if(_lb_tw < min_ntd){
+                _lb_tw = min_ntd;
+            }else{
             }
 
             vertex_descriptor min_vertex;
             min_vertex = min_pair.first;
+            assert(_degreemap[min_vertex]);
+            assert(_degreemap[min_vertex]==min_pair.second);
 
             //least-c heuristic: search the neighbour of min_vertex such that
             //contracting {min_vertex, w} removes the least edges
-            vertex_descriptor w = get_least_common_vertex(min_vertex, _g);
-
-            degs.unlink(w);
-            degs.unlink(min_vertex);
+            vertex_descriptor w = get_least_common_vertex(
+                    min_vertex, _marker, _subgraph);
 
             //Contract the edge between min_vertex into w.
             //Clear min_vertex and rearrange degs through callback.
-            trace2("dclc contracting", min_vertex, w);
-
-            contract_edge(min_vertex, w, _g, false, &cb);
-
-            degs.reg(w);
-            degs.update_queued();
+            contract_edge(min_vertex, w, degs);
         }
-
-        timer_off();
     }
 
     std::pair<unsigned, unsigned> get_bagsize() const{ untested();
-        return std::make_pair(_lb+1, -1);
+        return std::make_pair(_lb_tw+1, -1);
     }
     std::pair<int, int> get_treewidth() const{ untested();
-        return std::make_pair(_lb, -2);
+        return std::make_pair(_lb_tw, -2);
     }
-    unsigned lower_bound_bagsize(){ untested();
-        return _lb+1;
+    unsigned lower_bound_bagsize(){
+        return _lb_tw+1u;
+    }
+private:
+    // sort of "eliminate v".
+    template<class D> // TODO...
+    void contract_edge(vertex_descriptor v,
+                       vertex_descriptor target, D& _degs) {
+        _numbering.put(v);
+        _degs.unlink(v);
+
+        trace3("elim", v, _num_edges, _degreemap[v]);
+//        _numbering.increment();
+#ifndef NDEBUG
+        // precondition: the neighs of v are marked!
+        {
+            auto p=adjacent_vertices(v, _subgraph);
+            for(; p.first!=p.second; ++p.first){
+                assert(_marker.is_marked(*p.first));
+            }
+        }
+#endif
+        auto p=adjacent_vertices(target, _subgraph);
+        for(; p.first!=p.second; ++p.first){
+            _marker.unmark(*p.first);
+            assert(*p.first!=v);
+        }
+        _marker.unmark(target);
+
+        // TODO/LATER: modify baseclass::subgraph ...
+        auto q=boost::adjacent_vertices(v, _subgraph);
+        for(; q.first!=q.second; ++q.first){
+            trace3("n", v, target, *q.first);
+            if(_marker.is_marked(*q.first)){
+                assert(*q.first!=target);
+            }
+
+            if(*q.first==target){ itested();
+                --_num_edges;
+                assert(_degreemap[*q.first]);
+                --_degreemap[*q.first];
+            }else if(_marker.is_marked(*q.first)){ itested();
+                // a neigh of v not connected to target.
+                // "move" edge.
+                assert(!boost::edge(target, *q.first, _g).second);
+                assert(!boost::edge(*q.first, target, _g).second);
+                treedec::add_edge(target, *q.first, _g);
+                assert(boost::edge(target, *q.first, _g).second);
+                assert(boost::edge(*q.first, target, _g).second);
+                // ++_degreemap[*q.first];
+                ++_degreemap[target];
+                // ++_num_edges;
+            }else{ itested();
+                // this one has been connected to both. now only one.
+                // tell degs...
+                --_num_edges;
+                assert(_degreemap[*q.first]);
+                --_degreemap[*q.first];
+                assert(_degreemap[*q.first]);
+                _degs.update(*q.first);
+            }
+
+
+        }
+        _degs.update(target);
+
+//        boost::clear_vertex(v, g);
     }
 
+private: // overrides
+    bool next(vertex_descriptor &) { incomplete(); return false;}
+    void eliminate(vertex_descriptor) { incomplete(); }
 private:
-    G_t& _g;
-    unsigned _lb; // the treewidth!
-};
+    unsigned _lb_tw;
+}; // deltac_least_c
 
 } //namespace impl
 
@@ -898,16 +993,16 @@ private:
 template <typename G_t>
 int deltaC_least_c(G_t& G)
 {
-    unsigned int V = boost::num_vertices(G);
-    unsigned int E = boost::num_edges(G);
+    auto V=boost::num_vertices(G);
+    auto E=treedec::num_edges(G);
 
-    if(V == 0){ untested();
+    if(V == 0){
         return -1;
-    }else if(E == 0){ untested();
+    }else if(E == 0){
         return 0;
-    }else if(2*E == V*(V-1u)){ untested();
+    }else if(2*E == V*(V-1u)){
         return V-1u;
-    }else{ untested();
+    }else{
         impl::deltaC_least_c<G_t> deltaC_least_c(G);
         deltaC_least_c.do_it();
         trace1("basize", deltaC_least_c.lower_bound_bagsize());
@@ -1088,7 +1183,16 @@ namespace impl{
 template <typename G_t, typename CFG_t>
 class LB_improved_contraction_base : public treedec::algo::draft::algo1{
 public:
-    LB_improved_contraction_base(G_t &G) : algo1(CFG_t::name()), _g(G), _lb(0){}
+    typedef typename boost::graph_traits<G_t>::vertex_descriptor vertex_descriptor;
+    typedef typename boost::graph_traits<G_t>::vertices_size_type vertices_size_type;
+private:
+    typedef treedec::draft::sMARKER<vertices_size_type, vertices_size_type> marker_type;
+public:
+    LB_improved_contraction_base(G_t &G)
+      : algo1(CFG_t::name()), _g(G), _lb(0),
+        _marker(boost::num_vertices(G))
+    {
+    }
 
     void do_it(){
         timer_on();
@@ -1109,13 +1213,10 @@ public:
                     break;
                 }
 
-                typename boost::graph_traits<G_t>::vertex_descriptor min_vertex
-                    = get_min_degree_vertex(H, true); //ignore isolated vertices
+                auto min_vertex=get_min_degree_vertex(H, true); //ignore isolated vertices
+                auto w=get_least_common_vertex(min_vertex, _marker, H);
 
-                typename boost::graph_traits<G_t>::vertex_descriptor w =
-                              get_least_common_vertex(min_vertex, H);
-
-                contract_edge(min_vertex, w, H, false);
+                contract_edge(min_vertex, w, H);
 
                 CFG_t::improvement_algo(H, lb+1);
             }
@@ -1140,6 +1241,7 @@ public:
 private:
     G_t& _g;
     unsigned _lb;
+    marker_type _marker;
 };
 
 } //namespace impl
@@ -1190,13 +1292,13 @@ int LBNC_deltaD(G_t const&G)
 
 template <typename G_t>
 struct CFG_LBNC_deltaC{
-    static int lb_algo(G_t &H){ untested();
+    static int lb_algo(G_t &H){
         impl::deltaC_least_c<G_t> deltaC(H);
         deltaC.do_it();
         return (int)deltaC.lower_bound_bagsize() - 1;
     }
 
-    static void improvement_algo(G_t &H, unsigned k){ untested();
+    static void improvement_algo(G_t &H, unsigned k){
         treedec::lb::k_neighbour_improved_graph(H, k);
     }
 
@@ -1246,7 +1348,7 @@ void k_path_improved_graph(G_t &G, unsigned int k){
                     Y.insert(*nIt);
                 }
 
-                std::vector<bool> disabled(boost::num_vertices(G), false);
+                std::vector<BOOL> disabled(boost::num_vertices(G), false);
                 unsigned int pos1 = get_pos(*vIt1, G);
                 unsigned int pos2 = get_pos(*vIt2, G);
                 assert(pos1!=pos2);
@@ -1506,7 +1608,7 @@ int MCSC(G_t& G)
         max = (result.first > max)? result.first : max;
         typename boost::graph_traits<G_t>::vertex_descriptor v = result.second;
 
-        typename boost::graph_traits<G_t>::vertex_descriptor w = get_least_common_vertex(v, G);
+        auto w=get_least_common_vertex(v, G);
 
         contract_edge(w, v, G);
     }

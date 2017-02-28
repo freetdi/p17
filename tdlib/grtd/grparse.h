@@ -22,7 +22,7 @@
  * c A comment ...
  * c first noncommment:
  * c "p tw" followed by number of vertices, number of edges.
- * p tw 16 32    
+ * p tw 16 32
  * c A comment ...
  * 1 2
  * 1 14
@@ -39,8 +39,6 @@
 #include <fstream>
 #include <iostream>
 #include "assert.h"
-#include <gala/boost.h>
-#include <gala/trace.h>
 
 static const unsigned BUFSIZE=256;
 
@@ -253,9 +251,6 @@ void PARSE::parse_boost(G&g)
 	typename boost::graph_traits<G>::vertex_iterator base=boost::vertices(g).first;
 	detail::parse_backend<G, typename boost::graph_traits<G>::vertex_iterator::iterator_category>::
 		do_it(g, base, *this);
-
-	trace2("done", size_t(boost::num_vertices(g)),
-	               size_t(boost::num_vertices(g)));
 }
 /*--------------------------------------------------------------------------*/
 namespace detail{
@@ -279,7 +274,6 @@ namespace detail{
 			typename boost::graph_traits<G>::vertex_descriptor V, W;
 			V = *(base+(v-1));
 			W = *(base+(w-1));
-			trace3("", line, V, W);
 			assert(V!=W);
 			boost::add_edge(V, W, g);
 		}
@@ -290,7 +284,6 @@ namespace detail{
 		static void do_it(G& g, typename boost::graph_traits<G>::vertex_iterator base, PARSE& P)
 		{
 			--base; // .gr starts at 1
-			trace1("", size_t(boost::num_vertices(g)));
 			size_t E = boost::num_edges(g);
 			assert(!E);
 			// use iterator?!

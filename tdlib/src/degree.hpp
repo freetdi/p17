@@ -151,17 +151,17 @@ public: // construct
     }
 
 private:
-    void init(){
-
-        if(!boost::num_vertices(_g)){
+    void init(){ untested();
+        if(!boost::num_vertices(_g)){ untested();
+        }else{ untested();
         }
         CFG::alloc_init(boost::num_vertices(_g));
         vertex_iterator vIt, vEnd;
-        for(boost::tie(vIt, vEnd) = boost::vertices(_g); vIt != vEnd; ++vIt){ itested();
+        for(boost::tie(vIt, vEnd) = boost::vertices(_g); vIt != vEnd; ++vIt){
             unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), *vIt);
             assert(pos<_vals.size());
             _vals[pos] = _degree[*vIt];
-            trace2("init pushing", *vIt, _vals[pos]);
+//            trace2("init pushing", *vIt, _vals[pos]);
             _degs.push(*vIt);
             assert(is_reg(*vIt));
         }
@@ -182,8 +182,7 @@ public:
     }
 
 public: // queueing
-    void unlink(const vertex_descriptor& v, size_t x)
-    {
+    void unlink(const vertex_descriptor& v, size_t /*x*/){
         assert(treedec::is_valid(v, _g));
 #ifndef NDEBUG
         if(!is_reg(v)){
@@ -213,8 +212,7 @@ public: // queueing
         assert(d<boost::num_vertices(_g));
         reg(v, d);
     }
-    void reg(const vertex_descriptor& v, size_t d)
-    {
+    void reg(const vertex_descriptor& v, size_t d) {
         assert(treedec::is_valid(v,_g));
 //        bool n=_fill.insert(std::make_pair(missing_edges,v)).second;
 //        assert(n);
@@ -222,13 +220,10 @@ public: // queueing
 
         unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), v);
         _vals[pos] = d;
-        trace2("reg", v, pos);
         _degs.push(v);
     }
-    void update(const vertex_descriptor& v)
-    {
+    void update(const vertex_descriptor& v) {
         _vals[v]=_degree[v]; // BUG. use the same array!!
-        trace2("update", v, _vals[v]);
         _degs.update(v);
     }
 #ifndef NDEBUG
@@ -373,12 +368,12 @@ private:
 
 //register a 1-neighborhood to DEGS
 template<class U, class G_t, class B, class D>
-void redegree(U, G_t const &G, B I, B E, D& degree)
-{ incomplete();
+void redegree(U, G_t const& G, B I, B E, D& degree)
+{ // incomplete(); recheck!!
     for(; I!=E; ++I){
         typename boost::graph_traits<G_t>::vertex_descriptor x=*I;
         assert(treedec::is_valid(x, G));
-        size_t deg = boost::degree(x, G);
+        size_t deg = boost::out_degree(x, G);
         degree.reg(x, deg);
     }
 }

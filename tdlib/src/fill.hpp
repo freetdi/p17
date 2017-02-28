@@ -28,8 +28,10 @@
 
 #include <assert.h>
 
+#include "directed_view.hpp"
 #include "graph.hpp"
 #include "trace.hpp"
+#include "util.hpp"
 
 #if __cplusplus >= 201103L
 # include <unordered_set>
@@ -59,20 +61,22 @@ struct fill_config{ //
 
 
 namespace misc{ // treedec::misc? hmmm.
-
+ 
 template<class G_t, class CFG=detail::fill_config<G_t> >
-class FILL{ //
+class FILL{
     // FILL(const FILL&) : _degree(n, 0), _fill(n_ + 1, n_, _degree, id),
     // { untested();
     // }
 public: // types
-    typedef typename boost::graph_traits<G_t>::vertices_size_type size_type;
+    typedef typename boost::graph_traits<G_t>::vertices_size_type vertices_size_type;
+    typedef vertices_size_type size_type; //??
+    typedef treedec::draft::sMARKER<vertices_size_type, vertices_size_type> marker_type;
 private: // types
-    class status_t{ //
+    class status_t{
     public:
         typedef size_type value_type;
     public:
-        status_t() : _value(0), queued(false), _n(false) {}
+        status_t() : _value(0), queued(false) {}
     public:
         size_type _value; // fill value, -1==unknown.
         bool queued; // it is not in a bucket right now.
@@ -86,19 +90,6 @@ private: // types
             return _value;
         }
     public:
-        void set_neighbour()
-        {
-            assert(!_n);
-            _n=true;
-        }
-        void unset_neighbour()
-        {
-            _n=false;
-        }
-        bool is_neighbour() const
-        {
-            return(_n);
-        }
         void set_unknown()
         { untested();
             _value = size_type(-1);
@@ -117,8 +108,6 @@ private: // types
             _value = v;
         }
 //        bool operator==(size_t v) const{return _value==v;}
-    private:
-        bool _n; // it's a neighbour of the vertex currently processed
     };
 public: // types
     typedef typename boost::graph_traits<G_t>::vertex_descriptor vertex_descriptor;
@@ -138,62 +127,74 @@ private:
 private:
     size_t max_missing_edges() const
     { itested();
-        // isolated nodes?
-        size_t nv=boost::num_vertices(_g);
-        return (nv-1)*(nv-2);
+        size_t nv=_vals.size();
+        // - isolated nodes?
+//        size_t nv=boost::num_vertices(_g);
+        return (nv-1)*(nv-2) / 2;
     }
 
 public: // construct
-    FILL(const G_t& g)
+    FILL(const G_t& g, unsigned nv /*bug*/)
        : _g(g),
          //_degree(boost::num_vertices(g), 0),
          _vi(boost::get(boost::vertex_index, g)),
-         _vals(boost::num_vertices(g)),
-         _fill(boost::num_vertices(g), // length
-               1+max_missing_edges(),     // max_bucket
+         _vals(nv),
+         _fill(nv, // length
+               1+max_missing_edges(),     // max_bucket // "1+" BUG?
                boost::make_iterator_property_map(&_vals[0], _vi, size_type()),
-               _vi)
+               _vi),
+         _neigh_marker(nv)
     {
-        trace1("FILL", boost::num_vertices(g));
+        trace2("FILL", nv, max_missing_edges());
 
         _init = true;
-        vertex_iterator vIt, vEnd;
         bool foundzero=false;
-        for(boost::tie(vIt, vEnd) = boost::vertices(g); vIt != vEnd; ++vIt){
-            unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), *vIt);
-            trace2("init", *vIt, pos);
+        auto p=boost::vertices(g);
+        unsigned checksum=0;
+        trace2("FILL", nv, p.first!=p.second);
+        for(; p.first!=p.second; ++p.first){
+            ++checksum;
+            auto m=boost::get(boost::vertex_index, _g);
+            auto pos=boost::get(m, *p.first);
+            trace2("init", *p.first, pos);
             assert(_vals.size()>pos);
             (void) pos;
-            if(boost::degree(*vIt, g)){
+            auto deg=boost::out_degree(*p.first, g);
+
+            if(deg){
                 size_t missing_edges=-1;
 
                 if(foundzero){
-                    q_eval(*vIt); //later.
+                    // bypass init. already found a nt. clique
+                    q_eval(*p.first); //later.
                     assert(_vals[pos].is_unknown());
-                    assert(contains(_eval_queue, *vIt));
+                    assert(contains(_eval_queue, *p.first));
                 }else{
-                    missing_edges = treedec::count_missing_edges(*vIt,_g);
-                    reg(*vIt, missing_edges);
+                    missing_edges = treedec::count_missing_edges(*p.first, _neigh_marker, _g);
+                    trace2("reg", *p.first, missing_edges);
+                    reg(*p.first, missing_edges);
                     assert(_vals[pos]==missing_edges);
                 }
 
                 if (!missing_edges){
+                    trace2("found isol", *p.first, lazy_init);
                     // faster by a few percent. sometimes?
                     foundzero = lazy_init;
+                }else{
                 }
             }else{
-                //skip isolated vertices
+                trace1("isolated node", *p.first);
             }
         }
         trace1("fill initialized", _eval_queue.size());
+        assert(nv==checksum);
         _init = false;
     }
 public: // check
-    void check()
-    {
-#ifdef EXCESSIVE_CHECK
+    void check() {
+#ifdef OLD_DEBUG // does no lnger work...
         for(auto p : _fill) { untested();
-            assert(treedec::count_missing_edges(p.second, _g) == p.first);
+            assert(treedec::count_missing_edges(p.second, _neigh_marker, _g) == p.first);
         }
 #endif
     }
@@ -227,7 +228,7 @@ public:
 
         unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), v);
         _vals[pos] = missing_edges;
-        trace2("reg", v, pos);
+//        trace2("reg", v, pos);
         _fill.push(v); // updates reverse map. (necessary?!)
         _vals[pos].queued = false;
         assert(!_vals[pos].is_unknown() || _init);
@@ -235,13 +236,14 @@ public:
 public:
     void reg(const vertex_descriptor v)
     { untested();
-        size_t missing_edges=treedec::count_missing_edges(v,_g);
+        size_t missing_edges=treedec::count_missing_edges(v, _neigh_marker, _g);
         reg(v, missing_edges);
     }
     void q_decrement(const vertex_descriptor v)
     {
-        unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), v);
-        if(_vals[pos].is_neighbour()){
+        auto m=boost::get(boost::vertex_index, _g);
+        auto pos=boost::get(m, v);
+        if(_neigh_marker.is_marked(pos)){
             // it's a neighbour. don't touch.
             return;
         }else if(_vals[pos].is_unknown()){ untested();
@@ -273,7 +275,8 @@ public:
     // not necessary
     void q_eval(const vertex_descriptor v, int def=-1)
     {
-        unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), v);
+        auto m=boost::get(boost::vertex_index, _g);
+        auto pos=boost::get(m, v);
         assert(def>=-1);
 
         if(def==-1 && _vals[pos].is_unknown()){
@@ -298,16 +301,21 @@ public: // O(1) neighbor stuff.
     // (override in case n is incdent to a newly inserted edge)
     void mark_neighbors(vertex_descriptor c, size_t cfill)
     {
-        typedef typename boost::graph_traits<G_t>::vertices_size_type vertices_size_type;
-        unsigned int posc = boost::get(boost::get(boost::vertex_index, _g), c);
+        _neigh_marker.clear();
+        auto m=boost::get(boost::vertex_index, _g);
+        auto posc=boost::get(m, c);
         (void) posc;
-        vertices_size_type degc=boost::degree(c, _g);
+
+        // TODO:: need degree
+        auto degc=boost::out_degree(c, _g);
         typename boost::graph_traits<G_t>::adjacency_iterator n, nEnd;
 
-        boost::tie(n, nEnd) = boost::adjacent_vertices(c, _g);
-        for(; n!=nEnd; ++n){
-            unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), *n);
-            _vals[pos].set_neighbour();
+        auto p=boost::adjacent_vertices(c, _g);
+        for(; p.first!=p.second; ++p.first){
+            auto m=boost::get(boost::vertex_index, _g);
+            auto const& n=p.first;
+            auto pos=boost::get(m, *n);
+            _neigh_marker.mark(pos);
 
             if(_vals[pos].is_unknown()){
                 // neighbor fill unknown. leave it like that.
@@ -318,11 +326,11 @@ public: // O(1) neighbor stuff.
             auto old_fill=_vals[pos].get_value();
             assert(old_fill>=0);
 
-            vertices_size_type degn=boost::degree(*n, _g);
+            auto degn=boost::out_degree(*n, _g);
             if(degn>=degc){
                 long X = degn - degc;
                 long new_fill = old_fill - cfill - X;
-                if(new_fill < 0){ itested();
+                if(new_fill < 0){
                     // new fill is wrong.
                     // there must be edges to fill adjacent to n...
                     q_eval(*n);
@@ -332,17 +340,6 @@ public: // O(1) neighbor stuff.
             }else{
                 q_eval(*n);
             }
-        }
-    }
-    // faster?!
-    template<class N>
-    void unmark_neighbours(N const& neighs)
-    {
-        typename N::const_iterator i=neighs.begin();
-        typename N::const_iterator e=neighs.end();
-        for(; i!=e; ++i){
-            unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), *i);
-            _vals[pos].unset_neighbour();
         }
     }
 
@@ -355,11 +352,14 @@ public: // picking
     std::pair<vertex_descriptor, fill_t> pick_min(unsigned lower=0,
             unsigned upper=-1u, bool erase=false)
     {
+        trace4("pickmin", erase, max_missing_edges(), lower, upper);
         if(upper!=-1u){
+        }else{
         }
 
         if(upper>max_missing_edges()){
             upper = max_missing_edges();
+        }else{
         }
 
         unsigned min_fill=0;
@@ -375,11 +375,11 @@ public: // picking
 
 #if 1 // slightly slower...
         trace1("", _eval_queue.size());
-        typename eq_t::const_iterator qi = _eval_queue.begin();
-        typename eq_t::const_iterator qe = _eval_queue.end();
+        auto qi = _eval_queue.begin();
 //        assert(qe!=qi || !_fill.empty());
-        for(; qi!=qe; ++qi){
-            unsigned int pos = boost::get(boost::get(boost::vertex_index, _g), *qi);
+        for(; qi!=_eval_queue.end(); ++qi){
+            auto m=boost::get(boost::vertex_index, _g);
+            auto pos=boost::get(m, *qi);
             size_type missing_edges;
 
             if(!_vals[pos].queued){
@@ -391,10 +391,13 @@ public: // picking
             }
 
             if(_vals[pos].is_unknown()){
-                missing_edges = treedec::count_missing_edges(*qi, _g);
+                missing_edges = treedec::count_missing_edges(*qi, _neigh_marker, _g);
             }else{
                 missing_edges = _vals[pos]._value;
-                assert(missing_edges == treedec::count_missing_edges(*qi, _g));
+#ifndef NDEBUG
+                auto mecheck=treedec::count_missing_edges(*qi, _neigh_marker, _g);
+                assert(missing_edges == mecheck);
+#endif
             }
             if(!missing_edges && erase){
                  // shortcut...?
@@ -431,12 +434,12 @@ public: // picking
                  // shortcut...
                 _vals[pos].queued = false;
                 return std::make_pair(v, 0);
-            }else{ untested();
             }
             reg(v, missing_edges);
         }
 #endif
-        }else{
+        }
+        else{
             // no need to process q. it's already there
         }
 
@@ -446,14 +449,14 @@ public: // picking
 
         min_fill=0;
         list_min_fill = _fill[min_fill];
-        while (list_min_fill.empty()) {
-            assert(min_fill<=max_missing_edges());
+        while (list_min_fill.empty()) { itested();
+            assert(min_fill<max_missing_edges());
             ++min_fill;
             list_min_fill = _fill[min_fill];
         }
 
 //        BOOST_AUTO(b, _fill.begin());
-        BOOST_AUTO(b, list_min_fill.top());
+        auto b=list_min_fill.top();
 //         list_min_fill.pop();
         assert(treedec::is_valid(b, _g));
 
@@ -520,6 +523,8 @@ private:
 //    mutable std::set<vertex_descriptor> _eval_queue;
     typedef std::vector<vertex_descriptor> eq_t;
     mutable eq_t _eval_queue;
+
+    marker_type _neigh_marker; // used in pick_min and in eliminate
 }; // FILL
 
 } //namespace misc

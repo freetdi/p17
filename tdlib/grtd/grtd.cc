@@ -21,13 +21,22 @@
 // tw-heuristic etc.
 //
 
+#include "config.h"
+
+#ifdef USE_GALA
 // #define USE_RANDOM_MD // 1
-// #define USE_FI // 2
+// #define USE_FI // 2 hmmm..
 // #define USE_MSVS_TRIVIAL // 4
-// #define USE_BMD // 8
+#define USE_BMD // 8
 // #define USE_SOME // maybe
-//#define USE_EX // 32
+#define USE_EX // 32
 #define USE_TA // 64
+// pace17 heuristics
+//
+#endif
+
+// this one works without gala
+#define USE_P17 // 128
 
 #ifdef DEBUG
 #undef NDEBUG
@@ -78,19 +87,18 @@ enum thread_n{
     nSOME = 4,
     nEX = 5,
     nTA = 6,
-    nTOTAL = 7
+    nP17 = 7,
+    nTOTAL = 8
 };
 
 // TODO: cleanup, threads now have names.
-const std::string names[] = {"MD", "FI", "MSVS", "BMD", "SOME", "EX", "NONE"};
+const std::string names[] = {"MD", "FI", "MSVS", "BMD", "SOME", "EX", "TA", "P17", "NONE"};
 
 std::mutex best_mutex;
 std::condition_variable cv;
 static std::atomic<unsigned> global_result;
 bool trace=false;
 
-
-// #include <tdlib/tuple_td.hpp>
 #include <boost/graph/graph_traits.hpp>
 
 #ifdef USE_SOME
@@ -100,26 +108,29 @@ bool trace=false;
 //
 #ifdef USE_GALA
 #include <gala/boost.h>
-#include <gala/td.h>
 #include <tdlib/directed_view.hpp>
-#include <gala/examples/ssg16i.h>
 #ifdef USE_RANDOM_MD
 #include <gala/examples/ssg_random.h>
 #endif
 // #include <boost/graph/minimum_degree_ordering.hpp>
 #include <gala/examples/ssg32i.h>
+#include <gala/examples/ssg16i.h>
+#include <gala/examples/ssg16ia.h>
 #include <gala/examples/svbs.h>
 #include <gala/examples/svbs_random.h>
+#include <gala/td.h>
+#include <gala/immutable.h>
+#include <gala/boost_copy.h>
+#else
+#warning no gala. does not fully work
 #endif
 
-#include "gala/boost_copy.h"
 
 #include <tdlib/combinations.hpp>
-#include <tdlib/preprocessing.hpp>
 #include <tdlib/elimination_orderings.hpp>
 #include <tdlib/printer.hpp>
-
 #include <tdlib/twthread.hpp>
+
 using treedec::TWTHREAD;
 using treedec::draft::TWTHREAD_BASE;
 
@@ -129,7 +140,6 @@ unsigned TWTHREAD_BASE::_running;
 #include "dumptd.h"
 
 // bug, still tdlib
-#include <gala/examples/ssg16ia.h>
 
 ////// why is this necessary? //////
 using boost::out_edges;
@@ -139,11 +149,13 @@ using boost::source;
 using boost::target;
 ////////////////////////////////////
 
+#ifdef USE_GALA
 BOOST_CONCEPT_ASSERT(( boost::IncidenceGraphConcept<ssg_16i> ));
 typedef typename treedec::graph_traits<ssg_16i>::immutable_type check_type;
 // boost::iterator_traits<check_type::out_edge_iterator>::value_type A;
 std::iterator_traits<check_type::out_edge_iterator>::value_type A;
 BOOST_CONCEPT_ASSERT(( boost::IncidenceGraphConcept<check_type> ));
+#endif
 
 typedef boost::adjacency_list<boost::setS, boost::vecS, boost::undirectedS> balu_t;
 typedef boost::adjacency_list<boost::setS, boost::vecS, boost::directedS> bald_t;
@@ -164,6 +176,27 @@ enum mag_t{
     M64=64
 };
 
+// fixme: move to other compilation unit
+#include <stdarg.h>
+#include <stdio.h>
+int errorlevel;
+template<class X, class ... rest>
+struct grtd_algo_config : treedec::algo::default_config<X, rest...>{
+    // print with "c "
+    static void message(int badness, const char* fmt, ...)
+    {
+        if (badness >= errorlevel){
+            char buffer[2048] = "";
+            va_list arg_ptr;
+            va_start(arg_ptr,fmt);
+            vsprintf(buffer,fmt,arg_ptr);
+            va_end(arg_ptr);
+            std::cout << "c " << buffer;
+        }else{
+        }
+    }
+};
+/*--------------------------------------------------------------------------*/
 
 
 #ifdef USE_GALA
@@ -181,28 +214,37 @@ template<class T, class...>
 using tdDEGS = misc::DEGS<T>;
 
 template<class G>
-struct dvv_config : public gala::graph_cfg_default<G>
-{
-    static constexpr bool is_directed=true;
+struct dvv_config : gala::graph_cfg_default<G> {
+    static constexpr bool is_directed=false;
+    static constexpr bool force_simple=true;
+    static constexpr bool force_loopless=true; // not used yet?
+    static constexpr bool force_symmetric=true; // not used yet?
     typedef tdDEGS<G> degs_type;
 };
 
+template<class G>
+struct dpvv_config : dvv_config<G> {
+    static constexpr bool force_simple=false;
+    static constexpr bool force_symmetric=false;
+    static constexpr bool is_directed=true;
+};
+
+typedef gala::graph<std::vector, std::vector, uint16_t, dpvv_config> sg_dpvv16;
+typedef gala::graph<std::vector, std::vector, uint32_t, dpvv_config> sg_dpvv32;
+
 typedef gala::graph<std::vector, std::vector, uint16_t, dvv_config> sg_dvv16;
-
-
-// template<class G>
-// struct svbs_config : public gala::graph_cfg_default<G> {
-// };
-
 typedef gala::graph<std::vector, std::vector, uint32_t, dvv_config> sg_dvv32;
-typedef gala::graph<std::set, std::vector, uint16_t> ssg16;
+
+//typedef gala::graph<std::set, std::vector, uint16_t> ssg16;
 #endif
 
+#ifdef USE_GALA
 #ifdef USE_BMD
 #include "bmd.h"
 #endif
 #if defined USE_SOME
 #include "some.h"
+#endif
 #endif
 
 struct sigaction sa;
@@ -276,6 +318,7 @@ public:
         return base::print_results_tree(o, _t, &_g); /// HACK passing &_g, for now.
     }
 
+    // BUG: use config.
     void cb(unsigned x)
     { itested();
         if(x){ untested();
@@ -326,20 +369,28 @@ private:
 }; // MD_THREAD
 #endif
 
+#ifdef USE_GALA
 #ifdef USE_TA
 #include "ta_thread.h"
 #endif
+#endif
 
+#ifdef USE_GALA
 #ifdef USE_FI
 #include "fi.h"
 #endif
 
-#if USE_GALA
+#ifdef USE_EX
 #include "ex.h"
+#endif
 #endif
 
 #ifdef USE_MSVS_TRIVIAL
 #include "msvs.h"
+#endif
+
+#ifdef USE_P17
+#include "p17.h"
 #endif
 
 
@@ -385,8 +436,18 @@ int main(int argc, char * const * argv)
     while(i<argc){
         if(!strncmp("-q", argv[i], 2)){ untested();
             quiet=true;
+        }else if(!strncmp("-L", argv[i], 2)){ untested();
+            errorlevel=bLOG;
+        }else if(!strncmp("-D", argv[i], 2)){ untested();
+            errorlevel=bDEBUG;
+        }else if(!strncmp("-N", argv[i], 2)){ untested();
+            errorlevel=bNOERROR;
+        }else if(!strncmp("-T", argv[i], 2)){ untested();
+            trace=true;
+            errorlevel=bTRACE;
         }else if(!strncmp("-t", argv[i], 2)){ untested();
             trace=true;
+            errorlevel=bTRACE;
             std::cerr << "tracing ON\n";
         }else if(!strncmp("-w", argv[i], 2)){ untested();
             m=M32;
@@ -411,23 +472,24 @@ int main(int argc, char * const * argv)
 
     PARSE* p;
 
-    try{
+    try{ untested();
         p = new PARSE(std::cin, oUPPER);
-    }catch(...){ // BUG catch what?!
+    }catch(...){ untested();
+        // BUG catch what?!
         std::cerr << "error parsing header\n";
         exit(2);
     }
-    global_result=p->num_vertices();
+    global_result = p->num_vertices();
     std::cout << "c status " << p->num_vertices() << " " << status_ms() << " initial\n";
 
-    if(m){
-    }else if(p->num_vertices() >= (1l<<31)-1){
+    if(m){ untested();
+    }else if(p->num_vertices() >= (1l<<31)-1){ untested();
         m = M32;
-    }else if(p->num_vertices() >= (1<<16)-1){
+    }else if(p->num_vertices() >= (1<<16)-1){ untested();
         m = M31;
-    }else if(p->num_vertices() >= (1<<15)-1){
+    }else if(p->num_vertices() >= (1<<15)-1){ untested();
         m = M16;
-    }else{
+    }else{ untested();
         m = M15;
     }
 
@@ -543,23 +605,31 @@ void twh(PARSE*p, mag_t m, unsigned mask)
 {
 
 #ifdef USE_GALA
-    typedef gala::graph<std::vector, std::vector, uint32_t, dvv_config> sg_dvv32;
+//    typedef gala::graph<std::vector, std::vector, uint32_t, dvv_config> sg_dvv32;
 
     typedef sg_dvv16 G16;
     typedef sg_dvv32 G32;
-//    typedef G16 G;
-    G16* pg16=NULL;
-    G32* pg32=NULL;
+
+    typedef sg_dpvv16 G16p;
+    typedef sg_dpvv32 G32p;
+
+    G16 g16;
+    G32 g32;
 
     if(m>M16){ untested();
-        pg32 = new G32(p->begin(), p->end(), p->num_vertices(), p->num_edges());
+        G32p pg32(p->begin(), p->end(), p->num_vertices(), p->num_edges());
+        g32 = std::move(pg32);
+        assert(boost::num_edges(g32)==p->num_edges()); // usually.
     }else{
-        pg16 = new G16(p->begin(), p->end(), p->num_vertices(), p->num_edges());
+        trace2("", p->num_vertices(), p->num_edges());
+        G16p pg16(p->begin(), p->end(), p->num_vertices(), p->num_edges());
+        trace1("", boost::num_edges(pg16));
+        g16 = std::move(pg16);
+        trace1("", boost::num_edges(g16));
+        assert(boost::num_edges(g16)==p->num_edges()); // usually.
     }
-//    G16& g(*pg16); // don't use.
-    G16& g16(*pg16); (void) g16;
-    G32& g32(*pg32); (void) g32;
 #else
+    incomplete();
     typedef balu_t G;
     typedef balu_t G16;
     typedef balu_t G32;
@@ -573,6 +643,9 @@ void twh(PARSE*p, mag_t m, unsigned mask)
     size_t e=p->num_edges();
 
     std::cout << "c n: " << n << ", e: " << e << std::endl;
+#ifdef USE_GALA
+    std::cout << "c gala on" << std::endl;
+#endif
 
     std::vector<TWTHREAD_BASE*> threads(nTOTAL);
 
@@ -601,12 +674,21 @@ void twh(PARSE*p, mag_t m, unsigned mask)
 #endif
 /*--------------------------------------------------------------------------*/
 #ifdef USE_FI
-    if(! ( mask & ( 1 << nFI ))) {
-    }else if( m <= M16){
+    if(! ( mask & ( 1 << nFI ))) { untested();
+    }else if( m <= M16){ untested();
         threads[nFI] = new FI_THREAD<G16>(g16, "FI16");
     }else{ untested();
 //        incomplete
 //        threads[nFI] = new FI_THREAD<G32>(g32, "FI32");
+    }
+#endif
+/*--------------------------------------------------------------------------*/
+#ifdef USE_P17
+    if(! ( mask & ( 1 << nP17 ))) {
+    }else if( m <= M16){ untested();
+        threads[nP17] = new P17_THREAD<G16, grtd_algo_config>(g16, "P17_16");
+    }else{ untested();
+        threads[nP17] = new P17_THREAD<G32, grtd_algo_config>(g32, "P17_32");
     }
 #endif
 /*--------------------------------------------------------------------------*/
@@ -620,9 +702,9 @@ void twh(PARSE*p, mag_t m, unsigned mask)
 #ifdef USE_BMD
     if(! ( mask & ( 1 << nBMD ))) {
     }else if(m <= M16){
-        threads[nBMD] = new BMD_THREAD<G16>(g16, "BMD16", m);
+        threads[nBMD] = new BMD_THREAD<G16, grtd_algo_config>(g16, "BMD16", m);
     }else if(m <= M32){ untested();
-        threads[nBMD] = new BMD_THREAD<G32>(g32, "BMD32", m);
+        threads[nBMD] = new BMD_THREAD<G32, grtd_algo_config>(g32, "BMD32", m);
     }else{
         incomplete();
         // need 64 bit BMD...
@@ -637,8 +719,10 @@ void twh(PARSE*p, mag_t m, unsigned mask)
     }else if(m > M16){ untested();
         // does this even make sense?
         // maybe for very sparse graphs...
+        // threads[nTA] = new TA_THREAD<G32>(boost::ref(g32), "TA32");
         threads[nTA] = new TA_THREAD<G32>(g32, "TA32");
     }else{
+        // threads[nTA] = new TA_THREAD<G16>(boost::ref(g16), "TA16");
         threads[nTA] = new TA_THREAD<G16>(g16, "TA16");
     }
 #endif
@@ -698,9 +782,11 @@ void twh(PARSE*p, mag_t m, unsigned mask)
 #ifdef USE_GALA // tmp hack
             // g.make_symmetric(true);
 #endif
-        default:
+        default: untested();
             threads[best_tid]->interrupt(); // uuh, wait here until copy is finished?!
+                 untested();
             threads[best_tid]->print_results(std::cout);
+                 untested();
             break;
         case nTOTAL:
             std::cout << "no result\n";

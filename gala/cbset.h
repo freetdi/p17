@@ -24,8 +24,7 @@
  */
 #pragma once
 
-#include <tdlib/trace.hpp>
-#include "ta_hash.h" // BUG
+#include "trace.h"
 
 /*--------------------------------------------------------------------------*/
 // TODO: size/storage control
@@ -58,27 +57,26 @@ namespace bits{
 // fixme: upper end missing?
 template<class CT>
 static inline void shiftBy(CT* s, unsigned dist, unsigned howmany=-1u)
-{ untested();
+{
   assert(dist>0);
   assert(dist);
   if(howmany==-1u){ untested();
 #ifndef NDEBUG
     incomplete();
 #endif
-  }else{ untested();
+  }else{
     howmany += dist;
   }
 
   assert(howmany>0);
-  for(unsigned x=howmany-1; x+1 != dist; --x) { untested();
+  for(unsigned x=howmany-1; x+1 != dist; --x) {
     unsigned tgt=x;
     if(tgt>howmany) break;
-    trace3("shift", x, x-dist, int(s[x-dist]));
     s[x] = s[x-dist];
   }
 
   // lower pad;
-  for(unsigned x=0; x<dist; ++x) { untested();
+  for(unsigned x=0; x<dist; ++x) {
     s[x] = 0;
   }
 }
@@ -89,13 +87,12 @@ static inline void shiftBy(CT* s, unsigned dist, unsigned howmany=-1u)
 //static inline bool contains(S const& s, typename S::value_type i);
 template<class S>
 static inline bool contains(S const& s, typename S::value_type i)
-{
-  assert(i<::n);
+{ itested();
   return s.contains(i);
 }
 /*--------------------------------------------------------------------------*/
 template<class T>
-unsigned numberofones(T x)
+inline unsigned numberofones(T x)
 { untested();
 #if 1 // GCC
   return __builtin_popcount(x);
@@ -110,8 +107,8 @@ unsigned numberofones(T x)
 }
 /*--------------------------------------------------------------------------*/
 template<>
-unsigned numberofones(uint64_t x)
-{ untested();
+inline unsigned numberofones(uint64_t x)
+{ itested();
 #if 1 // GCC
   return __builtin_popcountl(x);
 #else
@@ -125,7 +122,7 @@ unsigned numberofones(uint64_t x)
 }
 /*--------------------------------------------------------------------------*/
 struct nosize_t{
-  nosize_t(int){ untested();
+  nosize_t(int){ itested();
   }
   bool operator!=(const nosize_t&)const{ untested();
     return false;
@@ -133,21 +130,21 @@ struct nosize_t{
 };
 /*--------------------------------------------------------------------------*/
 struct nooffset_t{
-  nooffset_t(int){ untested();
+  nooffset_t(int){ itested();
   }
   operator unsigned() const { return 0; }
 };
 /*--------------------------------------------------------------------------*/
 struct nohowmany_t{
   nohowmany_t(){}
-  nohowmany_t(int){ untested();
+  nohowmany_t(int){ itested();
   }
   bool operator==(unsigned)const{ untested();
     return false;
   }
 };
 /*--------------------------------------------------------------------------*/
-template<unsigned W,
+template<unsigned W, // number of chunks
          typename CHUNK_T=uint8_t,
          typename OST=uint8_t,
          typename HMT=uint8_t,
@@ -159,11 +156,11 @@ namespace detail{
 BSDt
 struct cbshelp{
   static unsigned get_size(BSET_DYNAMIC<BSDa> const&, unsigned size)
-  { itested();
+  {
     return size;
   }
   static void set_size(SCT& x, unsigned size)
-  { untested();
+  {
     x = size;
   }
 };
@@ -176,12 +173,12 @@ template<class OST>
 struct ofhelp{
   typedef OST type;
   template<class H>
-  static const H& get(H const& h, unsigned W){ untested();
+  static const H& get(H const& h, unsigned){ untested();
     return h;
   }
   template<class H>
   static void set(type& h, H x){ untested();
-    h=x;
+    h = x;
   }
   static constexpr bool active=true;
 };
@@ -190,11 +187,11 @@ template<>
 struct ofhelp<nooffset_t>{
   typedef unsigned type;
   template<class W>
-  static W get(nooffset_t h, W w){ untested();
+  static W get(nooffset_t, W w){ untested();
     return w;
   }
   template<class H>
-  static void set(nooffset_t&, H){ untested();
+  static void set(nooffset_t&, H){ itested();
   }
   static constexpr bool active=false;
 };
@@ -204,11 +201,11 @@ struct hmhelp{
   typedef HMT type;
   typedef HMT const& ref;
   template<class H>
-  static const H& get(H const& h, unsigned){ untested();
+  static const H& get(H const& h, unsigned){
     return h;
   }
   template<class H>
-  static type& set(type& h, H x){ untested();
+  static type& set(type& h, H x){
     h = x;
     return h;
   }
@@ -221,8 +218,8 @@ struct hmhelp{
     for(;!d[h-1]; --h);
   }
   template<class X, class D>
-  static void pad(type& h, X const& x, D* d){ untested();
-    for(; h<=x; ++h){ untested();
+  static void pad(type& h, X const& x, D* d){
+    for(; h<=x; ++h){
       d[h] = 0;
     }
   }
@@ -237,24 +234,24 @@ struct hmhelp<nohowmany_t>{
   typedef unsigned type;
   typedef unsigned ref;
   template<class W>
-  static W get(nohowmany_t h, W w){ untested();
+  static W get(nohowmany_t, W w){ itested();
     return w;
   }
   template<class H>
-  static void set(nohowmany_t&, H){ untested();
+  static void set(nohowmany_t&, H){ itested();
   }
   template<class D>
-  static void trim(nohowmany_t&, D*){ untested();
+  static void trim(nohowmany_t&, D*){ itested();
   }
   template<class D>
-  static void trim_(nohowmany_t&, D*){ untested();
+  static void trim_(nohowmany_t&, D*){ itested();
   }
   template<class X, class D>
-  static void pad(nohowmany_t& h, X x, D* d){ untested();
+  static void pad(nohowmany_t&, X, D*){ itested();
   }
   template<class D>
-  static void clear(D* d, unsigned n){
-    for(unsigned i=0; i<n; ++i){
+  static void clear(D* d, unsigned n){ itested();
+    for(unsigned i=0; i<n; ++i){ itested();
       d[i]=0;
     }
   }
@@ -284,17 +281,15 @@ public:
   BSET_DYNAMIC()
     : _howmany(0),
       _offset(0),
-      _size(0) { untested();
+      _size(0)
+  {
+    detail::hmhelp<HMT>::clear(_d, W);
   }
   BSET_DYNAMIC(BSET_DYNAMIC const& o) :
-      _howmany(o._howmany), _offset(o._offset), _size(o._size) { untested();
-    trace2("copying from", o, unsigned(o.howmany()));
-    trace1("", uintptr_t(o.next())-uintptr_t(&o));
+      _howmany(o._howmany), _offset(o._offset), _size(o._size) {
     memcpy(_d, o._d, howmany()*sizeof(CHUNK_T));
-    trace2("copied.", *this, o.howmany());
     assert(howmany()<=W); // for now.
     assert(size()==o.size()); // for now.
-    assert(size()<=::n); // for now.
   }
 public:
   template<class SCT2>
@@ -308,27 +303,33 @@ public:
 public:
   class const_iterator{
   public:
+    const_iterator() : _i(-1u), _s(NULL) {
+    }
+    const_iterator(const const_iterator& o)
+      : _i(o._i), _c(o._c), _s(o._s)
+    {
+    }
     const_iterator(unsigned x, BSET_DYNAMIC const& s) :
-      _i(x), _s(s)
-    { untested();
+      _i(x), _s(&s)
+    {
       assert(x>=CHUNKBITS*s.offset());
 
-      if(_i==-1u){ untested();
+      if(_i==-1u){
 //      }else if(_i>=CHUNKBITS*(s._offset+s._howmany)){ untested();
 //	unreachable();
 //        _i = -1u; // CHUNKBITS*(s._offset+s._howmany);
 //	_c = 0;
-      }else if(s.howmany()==0){ untested();
+      }else if(s.howmany()==0){
 	// skip to end...
 	_i=-1u;
-      }else{ untested();
+      }else{
 	// assert(_i<CHUNKBITS*(s._offset+s._howmany));
-	_c = _s._d[(x/CHUNKBITS)-_s.offset()] >> (x%CHUNKBITS);
-	if(_c){ untested();
+	_c = _s->_d[(x/CHUNKBITS)-_s->offset()] >> (x%CHUNKBITS);
+	if(_c){
 	  // newonb is not trimmed...
 	  // need to iterate anyway.
 	  unsigned ctz;
-	  if(CHUNKBITS>32){
+	  if(CHUNKBITS>32){ itested();
 	    ctz = __builtin_ctzl(_c);
 	  }else{
 	    ctz = __builtin_ctz(_c);
@@ -339,43 +340,47 @@ public:
 	}
 	skip();
       }
-      // trace2("ci", x, int(_s._howmany));
-      // trace2("ci", n, int(_s._offset));
-      // trace2("ci", int(_c), int(_s._d[0]));
     }
 
-    bool operator==(const_iterator const& o) const{return _i==o._i;}
-    bool operator!=(const_iterator const& o) const{return _i!=o._i;}
+    bool operator==(const_iterator const& o) const{
+      assert(_s);
+      return _i==o._i;
+    }
+    bool operator!=(const_iterator const& o) const{ itested();
+      return !operator==(o);
+    }
     unsigned operator*() const{return _i;}
-    const_iterator& operator++(){ itested();
+    const_iterator& operator++(){
+      assert(_s);
       assert(_i!=-1u);
       _c = _c+0;
       inc();
       skip();
-      // trace1("++skipped to", _i);
-      // trace1("++skipped to", (int)_c);
       return *this;
     }
-
+    const_iterator& operator=(const_iterator const& o){
+      _i = o._i;
+      _c = o._c;
+      _s = o._s;
+      return *this;
+    }
 private:
-    unsigned _i;
-    CHUNK_T _c;
-private:
-    void /*const_iterator::*/inc(){ itested();
+    void /*const_iterator::*/inc(){
+      assert(_s);
       ++_i;
-//      assert(_i <= CHUNKBITS*(_s._howmany+_s.offset()));
-      if(_i >= CHUNKBITS*(_s.howmany()+_s.offset())){ untested();
-	_i = -1u; // CHUNKBITS*(W+_s.offset());
-      }else if(_i%CHUNKBITS){ itested();
+//      assert(_i <= CHUNKBITS*(_s->_howmany+_s->offset()));
+      if(_i >= CHUNKBITS*(_s->howmany()+_s->offset())){
+	_i = -1u; // CHUNKBITS*(W+_s->offset());
+      }else if(_i%CHUNKBITS){
         _c = _c >> 1;
       }else{ itested();
-        assert(_i/CHUNKBITS>=_s.offset());
-        _c = _s._d[_i/CHUNKBITS-_s.offset()];
+        assert(_i/CHUNKBITS>=_s->offset());
+        _c = _s->_d[_i/CHUNKBITS-_s->offset()];
 	if(_c){ untested();
 	  unsigned ctz;
-	  if(CHUNKBITS>32){
+	  if(CHUNKBITS>32){ untested();
 	    ctz = __builtin_ctzl(_c);
-	  }else{
+	  }else{ untested();
 	    ctz = __builtin_ctz(_c);
 	  }
 	  _i += ctz;
@@ -383,25 +388,27 @@ private:
 	}
       }
     }
-    void /*const_iterator::*/skip(){ itested();
-      while(_i<CHUNKBITS*(_s.howmany()+_s.offset())){ itested();
-        if (_c & 1){ itested();
+    void /*const_iterator::*/skip(){
+      while(_i<CHUNKBITS*(_s->howmany()+_s->offset())){
+        if (_c & 1){
           break;
-        }else{ itested();
+        }else{
         }
 	_c = _c+0;
         inc();
       }
-      //trace3("doneskip", _i, int(_s.howmany()), int(_s.offset()));
     }
-    BSET_DYNAMIC const& _s;
-  };
+  private:
+    unsigned _i;
+    CHUNK_T _c;
+    BSET_DYNAMIC const* _s;
+  }; // const_iterator
+  typedef const_iterator iterator;
   class intersection_iterator{ //
   public:
     intersection_iterator(BSET_DYNAMIC const& s, BSET_DYNAMIC const& t, unsigned)
       : _i(CHUNKBITS*std::min(s.howmany()+s.offset(), t.howmany()+t.offset()))
     { untested();
-      trace1("ints end", _i);
     }
     intersection_iterator(BSET_DYNAMIC const& s, BSET_DYNAMIC const& t)
       : _s((s.offset()<=t.offset())?&t:&s),
@@ -414,7 +421,6 @@ private:
 	_i=M;
       }
       _i *= CHUNKBITS;
-      trace1("start", _i);
 #ifndef NDEBUG
       if(!_s->howmany()){ untested();
 	incomplete();
@@ -432,9 +438,17 @@ private:
       skip();
     }
 
-    bool operator==(intersection_iterator const& o) const{return _i==o._i;}
-    bool operator!=(intersection_iterator const& o) const{return _i!=o._i;}
-    unsigned operator*() const{return _i;}
+    bool operator==(intersection_iterator const& o) const{
+      assert(_s);
+      return _i==o._i;
+    }
+    bool operator!=(intersection_iterator const& o) const{
+      return !operator==(o);
+    }
+    unsigned operator*() const{
+      assert(_s);
+      return _i;
+    }
     intersection_iterator& operator++(){ untested();
       assert(_s);
       assert(_t);
@@ -562,10 +576,10 @@ private:
     return !(*this == t);
   }
   bool is_subset_of(BSET_DYNAMIC const& t) const;
-  unsigned size() const { untested();
+  unsigned size() const {
     return detail::cbshelp<BSDa>::get_size(*this, _size);
   }
-  unsigned empty() const { untested();
+  unsigned empty() const {
     return !size();
   }
   unsigned recount() const;
@@ -573,10 +587,11 @@ private:
   template<class SCT2>
   bool intersects(BSET_DYNAMIC<BSDa2> const& t) const;
 public: // modify
-  void insert(value_type i);
+  std::pair<unsigned /*SCT?*/, bool> insert(value_type i);
   void add(value_type i);
   template<class S>
   void add_sorted_sequence(S const& s);
+  void erase(value_type i);
   template<class S>
   void remove_sorted_sequence(S const& s);
   void intersect(BSET_DYNAMIC const& t);
@@ -586,67 +601,74 @@ public: // modify
   void merge(BSET_DYNAMIC<BSDa2> const& t);
   value_type front() const;
   value_type back() const;
-  void clear(){ untested();
+  void clear(){
     _howmany = 0;
     _offset = 0;
     _size = 0;
     detail::hmhelp<HMT>::clear(_d, W);
   }
 public: // dangerous
-  void erase(value_type i);
+  void erase_(value_type i);
+  void trim_above();
   void trim_below();
 public: // protect and friends?
-  void set_offset(offset_type x){ untested();
+  void set_offset(offset_type x){
     _offset=x;
   }
-  void set_size(unsigned s){ untested();
+  void set_size(unsigned s){
     detail::cbshelp<BSDa>::set_size(_size, s);
   }
 public: // iter
-  const_iterator begin() const{ itested();
+  const_iterator begin() const{
     assert(offset()==offset());
     auto I=const_iterator(CHUNKBITS*offset(), *this);
     return I;
   }
-  const_iterator end() const{ untested();
+  const_iterator end() const{
     return const_iterator(-1u, *this);
     return const_iterator(CHUNKBITS*(offset()+W), *this);
     return const_iterator(CHUNKBITS*(offset()+howmany()), *this);
   }
-  OST offset()const { untested();
-    if(_offset<W){ untested();
+  const_iterator find(unsigned x) const{ itested();
+    if(contains(x)){ itested();
+      return const_iterator(x, *this);
+    }else{ itested();
+      return end();
+    }
+  }
+  OST offset()const {
+    if(_offset<W){
       // ok
     }else{ untested();
     }
     return _offset;
   }
 public: // howmany stuff
-  typename detail::hmhelp<HMT>::ref const howmany()const { untested();
+  typename detail::hmhelp<HMT>::ref const howmany()const {
     return detail::hmhelp<HMT>::get(_howmany, W);
   }
 private:
-  void trim_tail(){ untested();
+  void trim_tail(){ itested();
     detail::hmhelp<HMT>::trim(_howmany, _d);
   }
-  void set_howmany(unsigned h){ untested();
+  void set_howmany(unsigned h){
     detail::hmhelp<HMT>::set(_howmany, h);
   }
 public:
   void* next()const { untested();
-    trace4("next", sizeof(HMT), sizeof(OST), sizeof(SCT), sizeof(CHUNK_T));
     return (void*)(uintptr_t(this)
 	+ sizeof(HMT) + sizeof(OST) + sizeof(SCT)
 	+ howmany()*sizeof(CHUNK_T));
   }
-  void check() const{ untested();
+  void check() const{ itested();
 #ifndef NDEBUG
-    if(howmany()){ untested();
+    if(howmany()){ itested();
       assert(_d[0] == _d[0]);
       assert(_d[howmany()-1] == _d[howmany()-1]);
     }
     assert(_offset<=W);
     assert(size() == recount());
-    for(auto const& v: *this){ untested();
+    for(auto const& v: *this){ itested();
       assert(contains(v));
     }
 #endif
@@ -673,11 +695,11 @@ template<unsigned W, typename CHUNK_T, typename HMT, typename OST>
 struct cbshelp<W, CHUNK_T, HMT, OST, nosize_t>{
   static unsigned get_size(
       BSET_DYNAMIC<W, CHUNK_T, HMT, OST, nosize_t> const& n, nosize_t)
-  { untested();
+  { itested();
     return n.recount();
   }
-  static void set_size(nosize_t x, unsigned size)
-  { untested();
+  static void set_size(nosize_t, unsigned)
+  { itested();
   }
 };
 /*--------------------------------------------------------------------------*/
@@ -688,20 +710,17 @@ struct cnt{
   static constexpr unsigned chunksize=sizeof(chunk_t);
 
   template<class D, class W, class H>
-  static unsigned count_bits(D const* dd, W& w, H h){
+  static unsigned count_bits(D const* dd, W& w, H h){ itested();
     unsigned k=0;
 
-    if(sizeof(chunk_t)<=size){ untested();
-      for (; w+(size/chunksize)<=h;){ untested();
+    if(sizeof(chunk_t)<=size){ itested();
+      for (; w+(size/chunksize)<=h;){ itested();
 	window_t d;
 	memcpy(&d, dd+w, size);
-	assert(k<=::n);
 	k += numberofones(d);
-	assert(k<=::n);
 
 	w += size/chunksize;
       }
-      trace3("done64", w, h, k);
     }
     return k;
   }
@@ -712,7 +731,7 @@ struct cnt{
 /*--------------------------------------------------------------------------*/
 BSDt
 inline unsigned BSET_DYNAMIC<BSDa>::recount() const
-{ untested();
+{ itested();
 // no, carve does not trim...
 //   if(_howmany){ untested();
 //     assert(_d[0]);
@@ -730,7 +749,6 @@ inline unsigned BSET_DYNAMIC<BSDa>::recount() const
   k += detail::cnt<unsigned short, CHUNK_T>::count_bits(_d, w, howmany());
   k += detail::cnt<unsigned char, CHUNK_T>::count_bits(_d, w, howmany());
 
-  assert(k<=::n);
   assert(k<=max_element+1);
   return k;
 }
@@ -754,11 +772,9 @@ inline void BSET_DYNAMIC<BSDa>::subtract(BSET_DYNAMIC const& t)
 template<BSDarg, typename SCT2>
 static inline BSET_DYNAMIC<BSDa> diff(BSET_DYNAMIC<BSDa> const& s,
     BSET_DYNAMIC<BSDa2> const& t)
-{ untested();
+{ itested();
   s.check();
   t.check();
-  trace1("", s);
-  trace1("", t);
   return BSET_DYNAMIC<BSDa>(s, t, BSET_DYNAMIC<BSDa>::setminus);
 }
 /*--------------------------------------------------------------------------*/
@@ -768,10 +784,10 @@ template<class SCT2>
 BSET_DYNAMIC<BSDa>::BSET_DYNAMIC(const BSET_DYNAMIC& s,
     const BSET_DYNAMIC<BSDa2>& t, BSET_DYNAMIC::_setminus_t)
   : _offset(s._offset), _size(s._size)
-{ untested();
+{ itested();
 #ifndef NDEBUG
   set_howmany(0);
-  for(unsigned i=0; i<W; ++i){
+  for(unsigned i=0; i<W; ++i){ itested();
     _d[i] = 0;
   }
 #endif
@@ -779,7 +795,7 @@ BSET_DYNAMIC<BSDa>::BSET_DYNAMIC(const BSET_DYNAMIC& s,
     assert(s.size()==s.recount());
     assert(t.size()==t.recount());
   int delta=s._offset-t._offset;
-  if(delta>=0){ untested();
+  if(delta>=0){ itested();
   }else{ untested();
   }
 
@@ -789,7 +805,7 @@ BSET_DYNAMIC<BSDa>::BSET_DYNAMIC(const BSET_DYNAMIC& s,
     _d[i] = s._d[i];
   }
 
-  for (; unsigned(i)<s.howmany() && (i+delta)<int(t.howmany()); i++) { untested();
+  for (; unsigned(i)<s.howmany() && (i+delta)<int(t.howmany()); i++) { itested();
     assert(i+delta>=0);
     set_size(size() - numberofones(s._d[i] & t._d[i+delta]));
     _d[i] = s._d[i] & ~t._d[i+delta];
@@ -815,7 +831,7 @@ BSET_DYNAMIC<BSDa>::BSET_DYNAMIC(const BSET_DYNAMIC& s,
 /*--------------------------------------------------------------------------*/
 BSDt
 void BSET_DYNAMIC<BSDa>::carve(const BSET_DYNAMIC& t)
-{ untested();
+{ itested();
   assert(size() == recount());
   assert(t.size() == t.recount());
   int delta=_offset-t._offset;
@@ -836,11 +852,10 @@ void BSET_DYNAMIC<BSDa>::carve(const BSET_DYNAMIC& t)
   }
 #endif
 
-  for (; i<howmany() && i+delta<t.howmany() ; i++) { untested();
+  for (; i<howmany() && i+delta<t.howmany() ; i++) { itested();
     assert(i>=0);
     assert(i+delta>=0);
     set_size(size() - numberofones(_d[i] & t._d[i+delta]));
-    //trace4(" ", unsigned(_d[i]), unsigned(t._d[i+delta]), _size, unsigned(_d[i] & t._d[i+delta]));
     _d[i] &= ~t._d[i+delta];
   }
 
@@ -861,9 +876,7 @@ void BSET_DYNAMIC<BSDa>::carve(const BSET_DYNAMIC& t)
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline void unionWith(BSET_DYNAMIC<BSDa>& s, BSET_DYNAMIC<BSDa> const& t)
-{ untested();
-  trace1("uw", s);
-  trace1("uw", t);
+{ itested();
   assert(s.size()==s.recount());
   assert(t.size()==t.recount());
   s.merge(t);
@@ -878,10 +891,10 @@ template<class SCT2>
 BSET_DYNAMIC<BSDa>::BSET_DYNAMIC(const BSET_DYNAMIC& s,
     const BSET_DYNAMIC<BSDa2>& t, BSET_DYNAMIC::_cup_t)
   : _offset(t._offset), _size(0)
-{ untested();
+{ itested();
 #ifndef NDEBUG
   set_howmany(0);
-  for(unsigned i=0; i<W; ++i){
+  for(unsigned i=0; i<W; ++i){ itested();
     _d[i] = 0;
   }
 #endif
@@ -901,7 +914,7 @@ BSET_DYNAMIC<BSDa>::BSET_DYNAMIC(const BSET_DYNAMIC& s,
 { untested();
 #ifndef NDEBUG
   set_howmany(0);
-  for(unsigned i=0; i<W; ++i){
+  for(unsigned i=0; i<W; ++i){ untested();
     _d[i] = 0;
   }
 #endif
@@ -912,21 +925,15 @@ BSET_DYNAMIC<BSDa>::BSET_DYNAMIC(const BSET_DYNAMIC& s,
 BSDt
 template<class SCT2>
 inline void BSET_DYNAMIC<BSDa>::merge(BSET_DYNAMIC<BSDa2> const& t)
-{ untested();
+{ itested();
   assert(size()==recount());
   assert(t.size()==t.recount());
 #ifndef NDEBUG
-  for(auto const& v: *this){ untested();
+  for(auto const& v: *this){ itested();
     assert(contains(v));
   }
 #endif
   BSET_DYNAMIC<BSDa> bak(*this);
-  trace1("merge", bak);
-#ifndef NDEBUG
-  for(auto const& v: *this){ untested();
-    assert(v<::n);
-  }
-#endif
   int delta=_offset-t._offset;
 
   unsigned char newhowmany=0;
@@ -996,7 +1003,7 @@ inline void BSET_DYNAMIC<BSDa>::merge(BSET_DYNAMIC<BSDa2> const& t)
     i = -delta;
 
     // merge.
-    for (; i<unsigned(t.howmany()-delta) && i<howmany(); ++i) { untested();
+    for (; i<unsigned(t.howmany()-delta) && i<howmany(); ++i) { itested();
       set_size(size() + numberofones((~_d[i]) & td[i]));
       _d[i] |= td[i];
     }
@@ -1007,7 +1014,7 @@ inline void BSET_DYNAMIC<BSDa>::merge(BSET_DYNAMIC<BSDa2> const& t)
       set_size(size() + numberofones(td[i]));
     }
 
-    if(newhowmany<i){ untested();
+    if(newhowmany<i){ itested();
       newhowmany = i;
     }
     if(newhowmany<howmany()){ untested();
@@ -1020,10 +1027,10 @@ inline void BSET_DYNAMIC<BSDa>::merge(BSET_DYNAMIC<BSDa2> const& t)
   set_howmany(newhowmany);
 
 #ifndef NDEBUG
-  for(auto const& v: bak){ untested();
+  for(auto const& v: bak){ itested();
     assert(contains(v));
   }
-  for(auto const& v: t){ untested();
+  for(auto const& v: t){ itested();
     assert(contains(v));
   }
 #endif
@@ -1035,8 +1042,8 @@ template<class SCT1, class SCT2>
 void BSET_DYNAMIC<BSDa>::merge(
     const BSET_DYNAMIC<BSDa1>& s,
     const BSET_DYNAMIC<BSDa2>& t, unsigned disjoint)
-{ untested();
-  if(s._offset==t._offset){ untested();
+{ itested();
+  if(s._offset==t._offset){ itested();
     unsigned i=0;
 
     // overlap
@@ -1046,7 +1053,7 @@ void BSET_DYNAMIC<BSDa>::merge(
 #else
     for(; i<t.howmany() && i<s.howmany(); ++i)
 #endif
-    { untested();
+    { itested();
       assert(i>=0);
       _d[i] = s._d[i] | t._d[i];
     }
@@ -1071,7 +1078,6 @@ void BSET_DYNAMIC<BSDa>::merge(
   unsigned i=0;
 
   // first chunk from t
-  trace0("first t");
 #if 0
   for(; i<std::min(delta, unsigned(t.howmany())); i++){ untested();
 #else
@@ -1126,22 +1132,16 @@ void BSET_DYNAMIC<BSDa>::merge(
   if(disjoint){ untested();
     assert(!s.intersects(t));
     detail::cbshelp<BSDa>::set_size(_size, s.size()+t.size());
-  }else{ untested();
+  }else{ itested();
     detail::cbshelp<BSDa>::set_size(_size, recount());
   }
   assert(size()==recount());
 
-#ifdef EXTRADEBUG
-  trace2("cup check", (int)howmany(), (int)_offset);
-  std::cout << "@!s" << s << "\n";
-  std::cout << "@!t" << t << "\n";
-  std::cout << "@!u" << *this << "\n";
-  for (auto const&v : s) { untested();
-    trace1("cup check s", v);
+#ifdef DEBUG
+  for (auto const&v : s) { itested();
     assert(contains(v));
   }
-  for (auto const&v : t) { untested();
-    trace1("cup check t", v);
+  for (auto const&v : t) { itested();
     assert(contains(v));
   }
 #endif
@@ -1159,15 +1159,15 @@ static inline void remove_(BSET_DYNAMIC<BSDa>& s,
 BSDt
 template<class S>
 inline void BSET_DYNAMIC<BSDa>::remove_sorted_sequence(S const& s)
-{ untested();
+{ itested();
   set_size(size() - s.size());
   if(size()==0){ untested();
     set_howmany(0);
     return;
-  }else{ untested();
+  }else{ itested();
   }
   auto i=s.begin();
-  for(;i!=s.end();++i){ untested();
+  for(;i!=s.end();++i){itested();
     assert(contains(*i));
     unsigned w = *i / CHUNKBITS;
     unsigned j = *i % CHUNKBITS;
@@ -1184,14 +1184,18 @@ inline void BSET_DYNAMIC<BSDa>::remove_sorted_sequence(S const& s)
     --_howmany;
   }
 #endif
-  if(use_howmany()){
+  if(use_howmany()){ untested();
     assert(!size() == !howmany());
   }
 }
 /*--------------------------------------------------------------------------*/
 BSDt
-inline void BSET_DYNAMIC<BSDa>::erase(value_type i)
+inline void BSET_DYNAMIC<BSDa>::erase_(value_type i)
 { untested();
+  assert(howmany()<=W);
+  assert(offset()<W);
+  assert(i<W*CHUNKBITS);
+
   assert(contains(i));
   assert(_howmany);
   assert(size());
@@ -1220,7 +1224,10 @@ inline void BSET_DYNAMIC<BSDa>::erase(value_type i)
 /*--------------------------------------------------------------------------*/
 BSDt
 inline void BSET_DYNAMIC<BSDa>::trim_below()
-{ untested();
+{
+  if(!use_offset()){ itested();
+    return;
+  }
   unsigned shift=0;
 
   // if !howmany, access uninitialized memory d[0]
@@ -1242,34 +1249,34 @@ inline void BSET_DYNAMIC<BSDa>::trim_below()
     set_howmany(howmany() - shift);
     set_offset(offset() + shift);
 #endif
-  }else{ untested();
+  }else{
 
   }
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 inline void trim(BSET_DYNAMIC<BSDa>& s)
-{ untested();
+{ itested();
   s.trim_below();
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 inline bool BSET_DYNAMIC<BSDa>::contains(value_type i) const
-{ untested();
+{
   assert(howmany()<=W);
   unsigned w=i / CHUNKBITS; // block that i is in.
   assert(offset()<=W);
-  if(_howmany==0){ untested();
+  if(howmany()==0){
     return false;
-  }else if(w<offset()){ untested();
+  }else if(w<offset()){
     return false;
-  }else{ untested();
+  }else{
     w-=offset();
   }
 
   if(w>=howmany()){ untested();
     return false;
-  }else{ untested();
+  }else{
   }
 
   unsigned j = i % CHUNKBITS;
@@ -1280,17 +1287,18 @@ inline bool BSET_DYNAMIC<BSDa>::contains(value_type i) const
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline unsigned long hash(BSET_DYNAMIC<BSDa> const& s)
-{ untested();
+{ itested();
   return s.hash();
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 inline unsigned long BSET_DYNAMIC<BSDa>::hash() const
-{ untested();
-  if(howmany()){ untested();
+{ itested();
+  if(use_howmany() && howmany()){ untested();
     assert(_d[0]);
     assert(_d[howmany()-1]);
   }
+  assert(use_howmany() || howmany()==W);
 
 #ifdef stdhash
   char* setbase = (char*)this;
@@ -1300,7 +1308,6 @@ inline unsigned long BSET_DYNAMIC<BSDa>::hash() const
   return std::hash<std::string>()(b) % nHash;
 #endif
 
-  assert(nHash);
   unsigned long altret;
   assert(sizeof(long)==8);
   if(1){}else
@@ -1313,7 +1320,7 @@ inline unsigned long BSET_DYNAMIC<BSDa>::hash() const
 //       ret = ret << _offset*CHUNKBITS;
 //     }
 
-    return ret % nHash;
+    return ret;
   }else if(W<=sizeof(unsigned long)){ untested();
     assert(CHUNKBITS==8);
     // 64 bit...
@@ -1327,7 +1334,7 @@ inline unsigned long BSET_DYNAMIC<BSDa>::hash() const
 //       ret = ret << offset()*CHUNKBITS;
 //     }
 
-    return ret % nHash;
+    return ret;
 
   }else if(false && W<=16){ untested();
 
@@ -1340,37 +1347,44 @@ inline unsigned long BSET_DYNAMIC<BSDa>::hash() const
     ret &= (1ll << (8*howmany())) -1;
     ret = ret << offset()*CHUNKBITS;
 
-    altret = ret % nHash;
+    altret = ret; // % nHash;
     return altret;
   }else{ untested();
   }
+
+  // 64 bit... is this too short?
   unsigned long h=0;
 
   unsigned a=offset();
   assert(offset()<=W);
   unsigned i=0;
-  for(; i<unsigned(howmany()); i++){ untested();
+
+//  incomplete();
+  // this is probably inefficient
+  for(; i<unsigned(howmany()); i++){ itested();
     unsigned long x=_d[i];
     h += x << CHUNKBITS*a;
-    h %= nHash;
+//    h %= nHash;
     ++a;
-    if(a==CHUNKBITS*W){ untested();
+    // if(a==CHUNKBITS*W){ untested(); // }
+    if(a*CHUNKBITS==8*sizeof(size_t)){ itested();
       a = 0;
+    }else{ untested();
     }
   }
-  return h % nHash;
+  return h; //  % nHash;
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline bool isSubset(BSET_DYNAMIC<BSDa> const& s, BSET_DYNAMIC<BSDa> const& t)
-{ untested();
+{ itested();
   return s.is_subset_of(t);
 }
 /*--------------------------------------------------------------------------*/
 template<BSDarg, typename SCT2>
 inline BSET_DYNAMIC<BSDa> union_(BSET_DYNAMIC<BSDa> const& s,
     BSET_DYNAMIC<BSDa2> const& t)
-{ untested();
+{ itested();
   assert(t.size()==t.recount());
   assert(s.size()==s.recount());
   return BSET_DYNAMIC<BSDa>(s, t, BSET_DYNAMIC<BSDa>::cup);
@@ -1379,11 +1393,13 @@ inline BSET_DYNAMIC<BSDa> union_(BSET_DYNAMIC<BSDa> const& s,
 BSDt
 inline void BSET_DYNAMIC<BSDa>::intersect(BSET_DYNAMIC const& t)
 { untested();
-  if(howmany()){ untested();
+  if(use_howmany() && howmany()){ untested();
     assert(_d[0]);
     assert(_d[howmany()-1]);
+  }else{ untested();
+    assert(W==howmany());
   }
-  if(t.howmany()){ untested();
+  if(t.use_howmany() && t.howmany()){ untested();
     assert(t._d[0]);
     assert(t._d[t.howmany()-1]);
   }
@@ -1391,6 +1407,7 @@ inline void BSET_DYNAMIC<BSDa>::intersect(BSET_DYNAMIC const& t)
   assert(size()==recount());
   int delta_=offset()-t.offset();
   if(delta_<0){ untested();
+    assert(use_offset());
     unsigned delta=-delta_;
     for(unsigned i=0; i<delta+howmany(); ++i){ untested();
 //      _size -= numberofones(_d[i]);
@@ -1407,7 +1424,6 @@ inline void BSET_DYNAMIC<BSDa>::intersect(BSET_DYNAMIC const& t)
   CHUNK_T* td=(CHUNK_T*)(t._d+delta);
   unsigned i=0;
   for (; i<howmany() && i+delta<t.howmany(); ++i) { untested();
-//    _size -= numberofones(_d[i] & ~(td[i]));
     _d[i] &= td[i];
   }
 
@@ -1417,7 +1433,6 @@ inline void BSET_DYNAMIC<BSDa>::intersect(BSET_DYNAMIC const& t)
 ///  for(; _howmany && !_d[_howmany-1];){ untested();
 //    --_howmany;
 //  }
-
 
   trim_below(); // inefficient.
 
@@ -1445,15 +1460,15 @@ static inline void intersection(BSET_DYNAMIC<BSDa>& s, BSET_DYNAMIC<BSDa> const&
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline void clear(BSET_DYNAMIC<BSDa>& s)
-{ untested();
+{ itested();
   s.clear();
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline void fullSet(BSET_DYNAMIC<BSDa>& s, unsigned n)
-{ untested();
+{ itested();
   clear(s);
-  for (unsigned v=0; v<n; v++) { untested();
+  for (unsigned v=0; v<n; v++) { itested();
     add(s, v);
   }
 }
@@ -1461,12 +1476,12 @@ static inline void fullSet(BSET_DYNAMIC<BSDa>& s, unsigned n)
 // check if all elements are also in t.
 BSDt
 bool BSET_DYNAMIC<BSDa>::is_subset_of(BSET_DYNAMIC const& t) const
-{ untested();
+{ itested();
   if(size()>t.size()){ itested();
     assert(size()==recount());
     assert(t.size()==t.recount());
     return false;
-  }else{ untested();
+  }else{ itested();
   }
   int delta=t.offset()-offset();
 
@@ -1483,8 +1498,8 @@ bool BSET_DYNAMIC<BSDa>::is_subset_of(BSET_DYNAMIC const& t) const
   }
 
   // overlap
-  for (; i<unsigned(howmany()) && int(i)<t.howmany()+delta; i++) { untested();
-    if (_d[i] & ~t._d[i-delta]) { untested();
+  for (; i<unsigned(howmany()) && int(i)<int(t.howmany())+delta; i++) { itested();
+    if (_d[i] & ~t._d[i-delta]) { itested();
       return false;
     }
   }
@@ -1495,16 +1510,12 @@ bool BSET_DYNAMIC<BSDa>::is_subset_of(BSET_DYNAMIC const& t) const
       return false;
     }
   }
-#ifndef NDEBUG
-  for(auto const& v: *this){ untested();
+#ifdef DEBUG
+  for(auto const& v: *this){ itested();
     if(!contains(v)){ untested();
-      trace1("hmm ", v);
       assert(false);
     }
     if(!t.contains(v)){ untested();
-      trace1("hmm ", v);
-      trace1("set ", *this);
-      trace1("superset", t);
       assert(false);
     }
   }
@@ -1513,8 +1524,6 @@ bool BSET_DYNAMIC<BSDa>::is_subset_of(BSET_DYNAMIC const& t) const
   return true;
 //FF:
 #ifndef NDEBUG
-  trace1("set ", *this);
-  trace1("superset", t);
   for(auto const& v: *this){ untested();
     if(!t.contains(v)){ untested();
       return false;
@@ -1542,41 +1551,44 @@ std::ostream& operator<<(std::ostream& o, BSET_DYNAMIC<BSDa> const& s)
 { // itested();
   typedef BSET_DYNAMIC<BSDa> B;
   unsigned i=0;
-  for(; i<B::CHUNKBITS*s.offset() && i<n; ++i){ untested();
+  for(; i<B::CHUNKBITS*s.offset(); ++i){ untested();
     o << BLANK_CHAR;
   }
 
-  for(; i<n && i<B::CHUNKBITS*(s.howmany()+s.offset()); ++i){ untested();
-//    trace3("<<", i, int(s.howmany()), int(s.offset()));
-    if(contains(s, i)) { untested();
+  for(; i<B::CHUNKBITS*(s.howmany()+s.offset()); ++i){ itested();
+    if(contains(s, i)) { itested();
       o << '1';
-    }else{ untested();
+    }else{ itested();
       o << '0';
     }
   }
-  for(; i<n; ++i){ itested();
-    o << BLANK_CHAR;
-  }
+//  for(; i<n; ++i){ itested();
+//    o << BLANK_CHAR;
+//  }
   return o;
 }
 /*--------------------------------------------------------------------------*/
 BSDt
-inline void BSET_DYNAMIC<BSDa>::insert(value_type i)
-{ untested();
-  if(!contains(i)){ untested();
+inline std::pair<unsigned, bool> BSET_DYNAMIC<BSDa>::insert(value_type i)
+{
+  trace3("insert", i, contains(i), size());
+  if(!contains(i)){
     add(i);
-  }else{ untested();
+    assert(contains(i));
+    return std::make_pair(i, true);
+  }else{
+    assert(contains(i));
+    return std::make_pair(i, false);
   }
-  assert(contains(i));
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 template<class S>
 inline void BSET_DYNAMIC<BSDa>::add_sorted_sequence(S const& s)
-{ untested();
+{ itested();
   unsigned ns=size()+s.size();
   auto i=s.begin();
-  if(i!=s.end()){ untested();
+  if(i!=s.end()){ itested();
     add(*i);
     ++i;
   }
@@ -1601,8 +1613,47 @@ inline void BSET_DYNAMIC<BSDa>::add_sorted_sequence(S const& s)
 }
 /*--------------------------------------------------------------------------*/
 BSDt
+inline void BSET_DYNAMIC<BSDa>::erase(value_type i)
+{
+  assert(howmany()<=W);
+  assert(offset()<W);
+  assert(i<W*CHUNKBITS);
+
+  unsigned chunk;
+  unsigned chunksize=CHUNKBITS;
+  assert(offset()<=W);
+
+  if(!contains(i)){
+    // not there...
+    return;
+  }else if(howmany()==0){ untested();
+    // nothing to erase.
+    return;
+  }else if(i/chunksize < offset()){ untested();
+    // too left
+    return;
+  }else{
+    chunk = i/CHUNKBITS - offset();
+  }
+  unsigned j = i % CHUNKBITS;
+
+  assert(chunk>=0);
+  assert(chunk<W);
+  if( _d[chunk] & ( 1llu << j ) ) {
+    set_size(size() - 1);
+    _d[chunk] &= ~ ( 1llu << j );
+    if(!chunk){
+      trim_below();
+    }else{
+    }
+  }else{
+  }
+  // trim_above(); not yet?
+}
+/*--------------------------------------------------------------------------*/
+BSDt
 inline void BSET_DYNAMIC<BSDa>::add(value_type i)
-{ untested();
+{
   assert(!contains(i));
   assert(howmany()<=W);
   assert(offset()<W);
@@ -1612,17 +1663,17 @@ inline void BSET_DYNAMIC<BSDa>::add(value_type i)
   unsigned chunksize=CHUNKBITS;
   assert(offset()<=W);
 
-  if(howmany()==0){ untested();
+  if(howmany()==0){
     chunk = 0;
     set_offset(i/chunksize);
-  }else if(i/chunksize < offset()){ untested();
+  }else if(i/chunksize < offset()){
     unsigned delta = offset() - i/chunksize;
     bits::shiftBy(_d, delta, howmany());
     set_offset(offset() - delta);
     set_howmany(howmany() + delta);
     assert(offset()<W);
     chunk = 0;
-  }else{ untested();
+  }else{
     chunk = i/CHUNKBITS - offset();
   }
   unsigned j = i % CHUNKBITS;
@@ -1636,19 +1687,18 @@ inline void BSET_DYNAMIC<BSDa>::add(value_type i)
   _d[chunk] |= 1llu << j;
   // std::cerr<<"did " << *this << "\n";
   assert(contains(i));
-  // trace2("inserted", *this, i);
   set_size(size() + 1);
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline void add(BSET_DYNAMIC<BSDa> &s, int i)
-{ untested();
+{ itested();
   s.add(i);
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline void insert(BSET_DYNAMIC<BSDa> &s, int i)
-{ untested();
+{ itested();
   s.insert(i);
 }
 /*--------------------------------------------------------------------------*/
@@ -1680,16 +1730,16 @@ inline typename BSET_DYNAMIC<BSDa>::value_type BSET_DYNAMIC<BSDa>::front() const
 /*--------------------------------------------------------------------------*/
 BSDt
 inline typename BSET_DYNAMIC<BSDa>::value_type BSET_DYNAMIC<BSDa>::back() const
-{ untested();
+{ itested();
   assert(howmany());
   assert(size());
-  for (unsigned k=howmany(); k;){ untested();
+  for (unsigned k=howmany(); k;){ itested();
     --k;
-    if (CHUNK_T xx=_d[k]) { untested();
+    if (CHUNK_T xx=_d[k]) { itested();
       CHUNK_T mask=1ul << (CHUNKBITS-1);
-      for (unsigned i = CHUNKBITS; i; ) { untested();
+      for (unsigned i = CHUNKBITS; i; ) { itested();
 	--i;
-	if ((xx & mask) != 0) { untested();
+	if ((xx & mask) != 0) { itested();
 	  return (k+offset()) * CHUNKBITS + i;
 	}
 	mask = mask >> 1;
@@ -1703,13 +1753,13 @@ inline typename BSET_DYNAMIC<BSDa>::value_type BSET_DYNAMIC<BSDa>::back() const
 /*--------------------------------------------------------------------------*/
 BSDt
 bool BSET_DYNAMIC<BSDa>::operator==(BSET_DYNAMIC const& t) const
-{ untested();
-  if(!use_offset()){
+{ itested();
+  if(!use_offset()){ itested();
   }else if(howmany()){ untested();
     assert(_d[0]);
     assert(_d[howmany()-1]);
   }
-  if(!t.use_offset() || !t.use_howmany() ){ untested();
+  if(!t.use_offset() || !t.use_howmany() ){ itested();
   }else if(t.howmany()){ untested();
     assert(t._d[0]);
     assert(t._d[t.howmany()-1]);
@@ -1722,22 +1772,22 @@ bool BSET_DYNAMIC<BSDa>::operator==(BSET_DYNAMIC const& t) const
     return(false);
   }else if(offset()!=t.offset()){ untested();
     return(false);
-  }else if(offset()==t.offset()){ untested();
+  }else if(offset()==t.offset()){ itested();
     // probably faster...
     // strcmp?
-    for(; i<howmany(); ++i){ untested();
+    for(; i<howmany(); ++i){ itested();
       if (_d[i] != t._d[i]) { untested();
 	return false;
-      }else{ untested();
+      }else{ itested();
       }
     }
   }
 
 #ifndef NDEBUG
-  for(auto const& v: *this){ untested();
+  for(auto const& v: *this){ itested();
     assert(t.contains(v));
   }
-  for(auto const& v: t){ untested();
+  for(auto const& v: t){ itested();
     assert(this->contains(v));
   }
 #endif
@@ -1747,20 +1797,20 @@ bool BSET_DYNAMIC<BSDa>::operator==(BSET_DYNAMIC const& t) const
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline bool intersects(BSET_DYNAMIC<BSDa> const& s, BSET_DYNAMIC<BSDa> const& t)
-{ untested();
+{ itested();
   return s.intersects(t);
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 template<class SCT2>
 bool BSET_DYNAMIC<BSDa>::intersects(BSET_DYNAMIC<BSDa2> const& t) const
-{ untested();
+{ itested();
   int delta=offset()-t.offset();
   // unsigned M=std::max(offset(), t.offset());
   // unsigned MM=std::min(howmany(), t.howmany());
-  if(delta>=0){ untested();
+  if(delta>=0){ itested();
     unsigned d=delta;
-    for (unsigned i=0; i<howmany() && i+d<t.howmany(); ++i) { untested();
+    for (unsigned i=0; i<howmany() && i+d<t.howmany(); ++i) { itested();
       if ((_d[i] & t._d[i+d])){ untested();
         return true;
       }else{ itested();
@@ -1780,13 +1830,13 @@ static inline bool empty(BSET_DYNAMIC<BSDa> const& s)
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline unsigned size(BSET_DYNAMIC<BSDa> const& s)
-{ untested();
+{ itested();
   return s.size();
 }
 /*--------------------------------------------------------------------------*/
 BSDt
 static inline bool equals(BSET_DYNAMIC<BSDa> const& s, BSET_DYNAMIC<BSDa> const& t)
-{ untested();
+{ itested();
   return s == t;
 }
 /*--------------------------------------------------------------------------*/
@@ -1814,10 +1864,37 @@ inline BSET_DYNAMIC<BSDa> intersection_(BSET_DYNAMIC<BSDa> const& s, BSET_DYNAMI
   }
 }
 /*--------------------------------------------------------------------------*/
-#include "setutil.h" // CLEANUP!
+ // CLEANUP!
+
+template<class S1, class S2>// variadic?
+struct lazy_union{
+public: // types
+	typedef typename S1::value_type value_type;
+public:
+	lazy_union(S1 const& s1, S2 const& s2)
+		: _s1(s1), _s2(s2) {}
+	lazy_union(lazy_union const& o)
+		: _s1(o._s1), _s2(o._s2) {}
+public:
+	template<class X>
+	bool contains(X x) const{ itested();
+		bool r=cbset::contains(_s1, x);
+		r |= cbset::contains(_s2, x);
+		return r;
+	}
+	bool empty() const{ untested();
+		return cbset::empty(_s1) && cbset::empty(_s2);
+	}
+
+private:
+	S1 const& _s1;
+	S2 const& _s2;
+};
+/*--------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------*/
 template<class S1, class S2>// variadic?
 lazy_union<S1, S2> make_lazy_union(S1 const& s1, S2 const& s2)
-{ untested();
+{ itested();
 	return lazy_union<S1, S2>(s1, s2);
 }
 /*--------------------------------------------------------------------------*/
@@ -1830,7 +1907,7 @@ public:
   lazy_intersection(S1 const& s, S1 const& t)
       : _s((s.offset()<=t.offset())?t:s),
 	_t((s.offset()<=t.offset())?s:t),
-	_delta(_s.offset()-_t.offset()){ untested();
+	_delta(_s.offset()-_t.offset()){ itested();
 
 #ifndef NDEBUG
     if(!_s.howmany()){ untested();
@@ -1854,7 +1931,6 @@ public:
       _scratch._d[0] = _s._d[i] & _t._d[i+_delta];
     }
 
-    trace2("", unsigned(_s.offset()), unsigned(_scratch.offset()));
     _hack = __builtin_ctz(_scratch._d[0]) + S1::CHUNKBITS*_scratch.offset();
     assert(_s.contains(_hack));
     assert(_t.contains(_hack));
@@ -1902,19 +1978,19 @@ private:
 /*--------------------------------------------------------------------------*/
 template<class S1, class S2>// variadic?
 lazy_intersection<S1, S2> make_lazy_intersection(S1 const& s1, S2 const& s2)
-{ untested();
+{ itested();
   return lazy_intersection<S1, S2>(s1, s2);
 }
 /*--------------------------------------------------------------------------*/
 template<BSDarg, class S>
 inline void add_sorted_sequence(BSET_DYNAMIC<BSDa>& b, S const& s)
-{ untested();
+{ itested();
   return b.add_sorted_sequence(s);
 }
 /*--------------------------------------------------------------------------*/
 template<BSDarg, class S>
 inline void remove_sorted_sequence(BSET_DYNAMIC<BSDa>& b, S const& s)
-{ untested();
+{ itested();
   return b.remove_sorted_sequence(s);
 }
 /*--------------------------------------------------------------------------*/

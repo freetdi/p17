@@ -19,15 +19,16 @@
 //  boost min-degree thread
 //
 
-template<class G>
-class BMD_THREAD : public TWTHREAD<G> {
+template<class G, template<class H, class ... > class cfgt=treedec::algo::default_config>
+class BMD_THREAD : public TWTHREAD<G, cfgt> {
 public:
     typedef std::vector<int> iorder_t;
-    typedef TWTHREAD<G> base;
+	typedef TWTHREAD<G, cfgt> base;
+	typedef cfgt<G> CFG;
     BMD_THREAD( G& g, const std::string& name="BMD", mag_t m=M64)
-        : base(g, name, 0), _g(g), _mag(m)
-    {
-        base::go();
+        : base(g, name /*, 0*/), _g(g), _mag(m)
+    { untested();
+//        base::go(); // ??
     }
 
     void do_print_results(std::ostream& o)
@@ -38,8 +39,7 @@ public:
         base::print_results_order(o, _elimord);
     }
 
-    void run()
-    {
+    void run() { untested();
 #ifdef USE_GALA
         // TODO: faster with "remove-only" stuffed vector-graph...
         sg_dvv16* pg16;
@@ -68,10 +68,14 @@ public:
         unsigned s;
         if(_mag<M16){
             trace1("BMD", boost::num_edges(g16));
-            s = treedec::impl::boost_minDegree_ordering(g16, _elimord);
+            treedec::impl::bmdo<sg_dvv16> A(g16, _elimord);
+				A.do_it();
+				s = A.bagsize();
         }else{ untested();
             trace1("BMD", boost::num_edges(g32));
-            s = treedec::impl::boost_minDegree_ordering(g32, _elimord);
+            treedec::impl::bmdo<sg_dvv32> A(g32, _elimord);
+				A.do_it();
+				s = A.bagsize();
         }
         trace1("BMD", s);
         base::commit_result(s);

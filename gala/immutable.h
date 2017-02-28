@@ -29,6 +29,9 @@
 
 #include <tdlib/graph_traits.hpp> // hmmm
 
+// almost sure...
+#define GETPOS(a,b) boost::get(boost::vertex_index,b,a)
+
 // HACK HACK HACK
 #ifndef TD_DEFS_NETWORK_FLOW
 #define TD_DEFS_NETWORK_FLOW
@@ -63,6 +66,7 @@ private:
 #endif
 
 // inspired by boost::container::flat_set
+// std::find on random access iterator should be fine...
 namespace boost_dissect{ //
    template <class RanIt, class key_type, typename size_type=size_t>
    inline RanIt priv_lower_bound(RanIt first, const RanIt last,
@@ -149,12 +153,12 @@ public: // types
 		}
 		edge_iterator(vertex_descriptor v, immvecgraph const& g)
 		    : _s(v), _t(g._vertices[v]), _g(&g)
-		{ untested();
+		{
 			skip();
 		}
 		edge_iterator(vertex_descriptor v, internal_out_edge_iterator w, immvecgraph const& g)
 		    : _s(v), _t(w), _g(&g)
-		{ untested();
+		{
 		}
 	public: // op
 		bool operator==(edge_iterator const& p) const
@@ -168,12 +172,12 @@ public: // types
 			return p._t!=_t;
 		}
 		void increment()
-		{ untested();
+		{
 			++_t;
 			skip();
 		}
 		void skip()
-		{ untested();
+		{
 			while( _t != _g->_vertices.back()){
 
 				if(*_t>_s){
@@ -191,7 +195,7 @@ public: // types
 			}
 		}
 		value_type operator*() const
-		{ untested();
+		{
 			return std::make_pair(_s, _t);
 		}
 		vertex_descriptor source() const
@@ -241,7 +245,7 @@ public: // types
 			++_t;
 		}
 		edge_descriptor operator*() const
-		{ untested();
+		{
 			return std::make_pair(_s, _t);
 		}
 	private:
@@ -288,7 +292,7 @@ public: // assign
 			S const& SRC, S const& SNK);
 
 	std::pair<edge_iterator, edge_iterator> edges() const
-	{ untested();
+	{
 		edge_iterator begin(0, *this);
 		edge_iterator end(num_vertices(), _vertices.back(), *this);
 		return std::make_pair(begin, end);
@@ -338,7 +342,7 @@ public:
 	}
 public: // boost interface
 	unsigned num_edges() const
-	{ untested();
+	{
 		return _edges.size() / 2;
 	}
 	unsigned degree(vertex_descriptor v) const
@@ -393,9 +397,10 @@ public:
 	std::vector<vertex_descriptor> _idxInverseMap;
 };
 
-namespace boost{ //
+namespace boost {
+
 	template<class G>
-	struct graph_traits<immvecgraph<G> >{ //
+	struct graph_traits<immvecgraph<G> >{
 		typedef typename immvecgraph<G>::vertex_descriptor vertex_descriptor;
 		typedef typename immvecgraph<G>::adjacency_iterator adjacency_iterator;
 		typedef typename immvecgraph<G>::edge_iterator edge_iterator;
@@ -427,7 +432,7 @@ namespace boost{ //
 	}
 	template<class G>
 	unsigned num_edges(immvecgraph<G> const& g)
-	{ untested();
+	{
 		return g.num_edges();
 	}
 	template<class G>
@@ -442,21 +447,21 @@ namespace boost{ //
 	}
 	template<class G>
 	unsigned out_degree(typename immvecgraph<G>::vertex_descriptor v, immvecgraph<G> const& g)
-	{ untested();
+	{
 		return g.degree(v);
 	}
 	template<class G>
 	inline std::pair<typename immvecgraph<G>::edge_iterator,
 	                 typename immvecgraph<G>::edge_iterator>
 	    edges(const immvecgraph<G>& g)
-	{ untested();
+	{
 		return g.edges();
 	}
 	template<class G>
 	inline typename immvecgraph<G>::vertex_descriptor source(
 			const typename immvecgraph<G>::edge_descriptor e,
 	      immvecgraph<G> const&)
-	{ untested();
+	{
 		return e.first;
 	}
 	template<class G>
@@ -532,6 +537,7 @@ namespace boost{ //
 	          typename immvecgraph<G>::vertex_iterator> vertices(const immvecgraph<G>& g){
 		return g.vertices();
 	}
+
 	class imm_vid_map : public put_get_helper<unsigned, imm_vid_map> {
 		public:
 			typedef readable_property_map_tag category;
@@ -548,8 +554,8 @@ namespace boost{ //
 	{
     return imm_vid_map();
 	}
-} // boost
 
+} // boost
 
 template<class G>
 	template<class S>
@@ -574,7 +580,7 @@ template<class G>
 
 		unsigned vn=0;
 		for(;v!=vend;++v){ untested();
-			auto vpos=treedec::get_pos(*v, *_g);
+			auto vpos=boost::get(boost::vertex_index, *v, *_g);
 			if(disabled[vpos]){ untested();
 			}else{ untested();
 				idxMap[vn] = *v;
@@ -584,7 +590,7 @@ template<class G>
 				BOOST_AUTO(e, E.first);
 				BOOST_AUTO(eend, E.second);
 				for(;e!=eend;++e){ untested();
-					if(!disabled[treedec::get_pos(*e, *_g)]){ untested();
+					if(!disabled[boost::vertex_index(boost::vertex_index, *_g, *e)]){ untested();
 						_edges.push_back(*e);
 					}else{ untested();
 					}
@@ -600,7 +606,7 @@ template<class G>
 		}
 
 		for(auto s : SRC){ untested();
-			auto p=treedec::get_pos(s, *_g);
+			auto p=boost::get(boost::vertex_index, *_g, s);
 			assert(p<boost::num_vertices(*_g));
 			assert(!disabled[p]);
 			assert(_idxInverseMap[p] < vn);
@@ -635,13 +641,15 @@ template<class G>
 #endif
 	}
 
-namespace treedec{
+namespace treedec {
+
+#if 0
 template<typename G_t>
 inline unsigned int get_pos(typename immvecgraph<G_t>::vertex_descriptor v, const immvecgraph<G_t>& G)
 {
     return boost::get(boost::vertex_index, G, v);
 }
-
+#endif
 
 namespace draft {
 
@@ -701,11 +709,11 @@ inline immvecgraph<G_t> const& immutable_clone(
 		// FIXME: pos, vertex_index?
 		assert(i < vdMap->size());
 		(*vdMap)[i] = *bi;
-		auto pos=get_pos(*bi, G);
+		auto pos=GETPOS(*bi, G);
 		assert(!pos || pos>prevpos);
 		reverse_map[pos] = i;
 		++i;
-		prevpos = get_pos(*bi, G);
+		prevpos = GETPOS(*bi, G);
 	}
 	assert(i==bag_nv);
 
@@ -717,7 +725,7 @@ inline immvecgraph<G_t> const& immutable_clone(
 	for(; bi!=be; ++bi){
 		unsigned new_vertex=ig.add_vertex();
 		assert(new_vertex<bag_nv);
-		BOOST_AUTO(N, get_pos(*bi, G)); (void)N;
+		BOOST_AUTO(N, GETPOS(*bi, G)); (void)N;
 		assert(reverse_map[N] == new_vertex);
 
 		BOOST_AUTO(vi, bbegin);
@@ -729,8 +737,8 @@ inline immvecgraph<G_t> const& immutable_clone(
 			}else if(*vi<*bi){
 				// egde if the inverse edge exists
 				// inefficient?! yes.
-				BOOST_AUTO(s, get_pos(*vi, G)); (void) s;
-				BOOST_AUTO(t, get_pos(*bi, G)); (void) t;
+				BOOST_AUTO(s, GETPOS(*vi, G)); (void) s;
+				BOOST_AUTO(t, GETPOS(*bi, G)); (void) t;
 				assert(s<t);
 				assert(reverse_map[s] < new_vertex);
 				auto rs=boost::vertex(reverse_map[s], ig);
@@ -745,14 +753,14 @@ inline immvecgraph<G_t> const& immutable_clone(
 			}
 
 			if(edg){
-				BOOST_AUTO(s, get_pos(*bi, G)); (void)s;
-				BOOST_AUTO(t, get_pos(*vi, G));
+				BOOST_AUTO(s, GETPOS(*bi, G)); (void)s;
+				BOOST_AUTO(t, GETPOS(*vi, G));
 				assert(ig._vertices.size()==unsigned(reverse_map[s]+1));
 				ig.push_edge(reverse_map[t]);
 			}else if(s==-1u){ // ..  && t>s)
-				assert(get_pos(*bi, G)!=-1);
-				s = get_pos(*bi, G);
-				t = get_pos(*vi, G);
+				assert(GETPOS(*bi, G)!=-1);
+				s = GETPOS(*bi, G);
+				t = GETPOS(*vi, G);
 				assert(s!=t);
 			}else{
 			}
@@ -793,5 +801,7 @@ inline immvecgraph<G_t> const& immutable_clone(
 
 } // draft
 } // treedec
+
+#undef GETPOS
 
 #endif // guard

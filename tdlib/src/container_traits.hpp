@@ -106,7 +106,7 @@ namespace detail{//
         // push, insert new item
         template<class E>
         static void push(C& c, E e)
-        { untested();
+        { itested();
           // BUG: this code is used for grtdprinter, no "contains" there
           // assert(!container_inspect<C>::contains(c, e));
           c.push_back(e);
@@ -184,4 +184,4 @@ namespace detail{//
 
 #endif
 
-// vim:ts=8:sw=2:et
+// vim:ts=8:sw=4:et

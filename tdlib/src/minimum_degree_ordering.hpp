@@ -709,6 +709,7 @@ namespace boost {
      VertexIndexMap vertex_index_map,
      unsigned ub = UINT_MAX)
   {
+    assert(boost::is_directed(G));
     detail::mmd_impl<Graph,DegreeMap,InversePermutationMap,
       PermutationMap, SuperNodeMap, VertexIndexMap> 
       impl(G, boost::num_vertices(G), degree, inverse_perm, 

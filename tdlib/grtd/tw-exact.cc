@@ -28,11 +28,23 @@ template<class G, class T, class lb>
 #include <iostream>
 #include <stdlib.h>
 
-#include <gala/examples/ssg16i.h>
+#include <gala/boost.h>
+#include <tdlib/directed_view.hpp>
+//#include <tdlib/treedec.hpp>
+// #include <gala/examples/ssg16i.h>
 #include <gala/examples/svbs.h>
 #include <gala/td.h>
-#include <tdlib/combinations.hpp>
+#include <gala/immutable.h>
+#include <gala/boost_copy.h>
+#include <tdlib/treedec.hpp>
 #include <tdlib/tuple_td.hpp>
+#include <tdlib/combinations.hpp>
+#include <tdlib/elimination_orderings.hpp>
+#include <tdlib/printer.hpp>
+#include <tdlib/twthread.hpp>
+
+#include <tdlib/combinations.hpp>
+//#include <tdlib/treedec.hpp>
 
 #include "grparse.h"
 #include "dumptd.h"
@@ -41,13 +53,14 @@ typedef boost::adjacency_list<boost::setS, boost::vecS, boost::undirectedS> balu
 typedef gala::graph<std::vector, std::vector, uint16_t> sg_dvv16;
 
 #if 1 // slow preprocessing
-typedef ssg_16i graph_t;
+//typedef ssg_16i graph_t;
+typedef balu_t graph_t;
 #else // broken preprocessing
 typedef sg_dvv16 graph_t;
 #endif
 
 typedef typename treedec::graph_traits<graph_t>::treedec_type decomp_t;
-typedef typename treedec::graph_traits<graph_t>::immutable_type immutable_type;
+//typedef typename treedec::graph_traits<graph_t>::immutable_type immutable_type;
 
 int main(int argc, char * const * argv)
 {

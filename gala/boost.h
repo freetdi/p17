@@ -30,7 +30,7 @@
 
 
 namespace boost { //
-	struct simplegraph_traversal_category :
+	struct gala_graph_traversal_category :
 		public virtual bidirectional_graph_tag, // ?!
 		public virtual adjacency_graph_tag,
 		public virtual edge_list_graph_tag,
@@ -160,15 +160,20 @@ namespace boost { //
 #endif
 	namespace util{
 		template<class C>
-		bool is_in_edgeset(C const& c, typename C::value_type v)
+		bool is_in_edgeset(C const& c, typename C::value_type v, bool s)
 		{
-			return std::find(c.begin(), c.end(), v)!=c.end();
+			if(s){
+				return std::binary_search(c.begin(), c.end(), v);
+			}else{
+				return std::find(c.begin(), c.end(), v)!=c.end();
+			}
 		}
 
 		// incomplete: other sets? use sfinae.h...
 		template<class E>
-		bool is_in_edgeset(std::set<E> const& c, E v)
-		{ untested();
+		bool is_in_edgeset(std::set<E> const& c, E v, bool s)
+		{ itested();
+			assert(s);
 			return c.find(v)!=c.end();
 		}
 	}
@@ -202,7 +207,7 @@ namespace boost { //
 		typedef typename gala::graph<SGARGS>::edge_type edge_descriptor;
 
 		typedef typename detail::galaboost_dir<G::is_directed()>::type directed_category;
-		typedef simplegraph_traversal_category traversal_category;
+		typedef gala_graph_traversal_category traversal_category;
 
 		typedef typename detail::galaboost_par<G::is_multiedge()>::type edge_parallel_category;
 
@@ -272,7 +277,7 @@ namespace boost { //
 				return base == other.base;
 			}
 			void increment()
-			{ itested();
+			{
 				++base;
 			}
 			void decrement()
@@ -313,7 +318,7 @@ namespace boost { //
 				return const_value_type(_base) == other;
 			}
 			bool operator==(const adjacency_iterator& other) const
-			{ untested();
+			{
 				return _base == other._base;
 			}
 			bool operator!=(const adjacency_iterator& other) const
@@ -360,8 +365,8 @@ namespace boost { //
 			typedef ptrdiff_t difference_type; // is this correct?
 			typedef std::input_iterator_tag iterator_category; // makes sense!?
 		public:
-			edge_iterator()
-			{ untested();
+			edge_iterator() : base()
+			{ itested();
 			}
 			edge_iterator(typename gala::graph<SGARGS>::iterator v,
 			              typename gala::graph<SGARGS>::out_vertex_iterator e,
@@ -384,7 +389,7 @@ namespace boost { //
 				typename G::vertex_type s = G::iter::deref(i);
 				typename G::vertex_type t = *base.second;
 
-				return std::make_pair(s,t);
+				return reference(s,t);
 			}
 			bool equal(const edge_iterator& other) const
 			{
@@ -415,9 +420,8 @@ namespace boost { //
 			}
 
 		private:
-		// typedef typename gala::graph<SGARGS>::edge_iterator value_type;
-			typename gala::graph<SGARGS>::edge_iterator base;
-					  const gala::graph<SGARGS>* _g;
+			base_type base;
+			const gala::graph<SGARGS>* _g;
 			friend class iterator_core_access;
 		};
 
@@ -437,29 +441,30 @@ namespace boost { //
 			    typename gala::graph<SGARGS>::out_vertex_iterator> value_type;
 		   typedef intptr_t difference_type; // why?
 			typedef typename gala::graph<SGARGS>::edge_type reference;
+			typedef typename gala::graph<SGARGS>::edge_type edge_type;
 
 		public: // construct
 			out_edge_iterator()
-			{ untested();
+			{
 			}
 			out_edge_iterator(
 			    typename boost::graph_traits<gala::graph<SGARGS> >::vertex_descriptor v,
 			    typename gala::graph<SGARGS>::out_vertex_iterator w)
-			{ untested();
+			{
 				base.first = v;
 				base.second = w;
 			}
 		private:
 			reference dereference() const
-			{ untested();
-				return std::make_pair(base.first, *base.second);
+			{
+				return edge_type(base.first, *base.second);
 			}
 			bool equal(const out_edge_iterator& other) const
-			{ untested();
+			{
 				return base.second == other.base.second;
 			}
 			void increment()
-			{ untested();
+			{
 				++(base.second);
 			}
 			void decrement()
@@ -495,7 +500,7 @@ namespace boost { //
 	                 typename graph_traits<::gala::graph<SGARGS> >::adjacency_iterator>
 	      adjacent_vertices(typename graph_traits<::gala::graph<SGARGS> >::vertex_descriptor u,
 	                        const gala::graph<SGARGS>& g)
-	{ untested();
+	{ itested();
 		typedef typename graph_traits<::gala::graph<SGARGS> >::adjacency_iterator Iter;
 		auto& o = g.out_edges(u);
 		return std::make_pair( Iter(o.begin()), Iter(o.end()));
@@ -531,7 +536,7 @@ namespace boost { //
     typename graph_traits<gala::graph<SGARGS> >::vertex_descriptor u,
     typename graph_traits<gala::graph<SGARGS> >::vertex_descriptor v,
     gala::graph<SGARGS>& g)
-	{ untested();
+	{
 		g.remove_edge(u, v);
 	}
 
@@ -539,13 +544,14 @@ namespace boost { //
 	void remove_out_edge_if(
 			typename graph_traits<gala::graph<SGARGS> >::vertex_descriptor u, PRED& p, gala::graph<SGARGS>& g)
 	{
+		// wrap P?
 		g.remove_out_edge_if(u, p);
 	}
 
 	VCTtemplate
 	void clear_vertex(typename graph_traits<::gala::graph<SGARGS>
 			>::vertex_descriptor u, ::gala::graph<SGARGS> &g)
-	{ untested();
+	{ itested();
 		g.clear_vertex(u);
 	}
 
@@ -574,19 +580,7 @@ namespace boost { //
 		assert(g.is_valid(u));
 
 		bool is_edge;
-#if 0
-		if(g.degree(u)<g.degree(v)){ untested();
-		//	std::swap(u,v); // does it really help?
-			auto i = g.out_edges(u).find(v);
-			is_edge = (i!=g.out_edges(u).end());
-		}else{ untested();
-			auto i = g.out_edges(v).find(u);
-			is_edge = (i!=g.out_edges(v).end());
-		}
-#else
-		is_edge = util::is_in_edgeset(g.out_edges(u),v);
-#endif
-
+		is_edge = util::is_in_edgeset(g.out_edges(u), v, g.is_ordered());
 
 		assert((!is_edge) || (u!=v));
 		
@@ -606,7 +600,7 @@ namespace boost { //
 	typename graph_traits<::gala::graph<SGARGS> >::degree_size_type
 	out_degree(typename graph_traits< ::gala::graph<SGARGS> >::vertex_descriptor u,
 			const ::gala::graph<SGARGS>&g)
-	{ itested();
+	{
 	   return g.degree(u);
 	}
 
@@ -669,7 +663,7 @@ namespace boost { //
 
 			return std::make_pair(Iter(u, U, &g),
 			                      Iter(e, U, &g));
-		}else{ untested();
+		}else{
 			// mpty
 			ovi E;
 			return std::make_pair(Iter(e, E, &g),
@@ -705,11 +699,14 @@ namespace boost { //
 		if(!g.is_directed()){
 			size_t c=0;
 			auto p=vertices(g);
-			for(; p.first!=p.second; ++p.first){
+			for(; p.first!=p.second; ++p.first){ itested();
 				c+=degree(*p.first, g);
 			}
 			if(g.is_multiedge()){
 			}else{
+			}
+			if(c!=g.num_edges()*2){
+				std::cerr << c << " vs " << g.num_edges() << "\n";
 			}
 			assert(c==g.num_edges()*2);
 		}
@@ -735,28 +732,27 @@ namespace boost { //
 
 namespace boost {
 
-
 	VCTtemplate
 	typename graph_traits<::gala::graph<SGARGS> >::vertices_size_type
 	num_vertices(const gala::graph<SGARGS>& g) { // untested();
 		return g.num_vertices();
 	}
 
-	VCTtemplate
-	struct vertex_property_type<::gala::graph<SGARGS> >{
-		typedef void type;
-	};
-	VCTtemplate
-	struct edge_property_type<::gala::graph<SGARGS> >{
-		typedef void type;
-	};
+//	VCTtemplate
+//	struct vertex_property_type<::gala::graph<SGARGS> >{
+//		typedef void type;
+//	};
+//	VCTtemplate
+//	struct edge_property_type<::gala::graph<SGARGS> >{
+//		typedef void type;
+//	};
 
 	// map stuff
 	VCTtemplate
-	class simplegraph_graph_index_map
+	class gala_graph_index_map
 	    : public put_get_helper<
 	        typename gala::bits::vertex_selector<ECT, VDP>::vertex_index_type,
-	        simplegraph_graph_index_map<SGARGS> >
+	        gala_graph_index_map<SGARGS> >
 	{ //
 		public:
 			typedef typename gala::bits::vertex_selector<ECT, VDP>::vertex_index_type vertex_index_type;
@@ -765,7 +761,7 @@ namespace boost {
 			typedef vertex_index_type value_type;
 			typedef vertex_index_type reference;
 			typedef vertex_descriptor key_type;
-			simplegraph_graph_index_map(gala::graph<SGARGS>const & g)
+			gala_graph_index_map(gala::graph<SGARGS>const & g)
 			    : _g(g)
 			{
 			}
@@ -775,7 +771,7 @@ namespace boost {
 //				assert(x == _g.position(x));
 				return _g.position(x);
 			}
-			simplegraph_graph_index_map& operator=(const simplegraph_graph_index_map& s)
+			gala_graph_index_map& operator=(const gala_graph_index_map& s)
 			{
 				assert(&s._g==&_g); (void)s;
 				return *this;
@@ -785,52 +781,52 @@ namespace boost {
 	};
 
 	// map stuff
-	class simplegraph_graph_eid_map
-		: public put_get_helper<int, simplegraph_graph_eid_map>
+	class gala_graph_eid_map
+		: public put_get_helper<int, gala_graph_eid_map>
 	{ //
 		public:
 			typedef readable_property_map_tag category;
 			typedef int value_type;
 			typedef int reference;
 			typedef std::pair<unsigned long, unsigned long> key_type; // ouch
-			simplegraph_graph_eid_map() { incomplete(); }
+			gala_graph_eid_map() { incomplete(); }
 			template <class T>
 			long operator[](T x) const { untested(); return x->id(); }
 	};
 
 	// property stuff.
 	template <class Tag>
-	struct simplegraph_property_map { };
+	struct gala_graph_property_map { };
 
 	template <>
-	struct simplegraph_property_map<vertex_index_t> {
+	struct gala_graph_property_map<vertex_index_t> {
 		VCTtemplate
 		struct bind_ {
-			typedef simplegraph_graph_index_map<SGARGS> type;
-			typedef simplegraph_graph_index_map<SGARGS> const_type;
+			typedef gala_graph_index_map<SGARGS> type;
+			typedef gala_graph_index_map<SGARGS> const_type;
 		};
 	};
 
 	template <>
-	struct simplegraph_property_map<edge_index_t> {
+	struct gala_graph_property_map<edge_index_t> {
 		VCTtemplate
 		struct bind_ {
-			typedef simplegraph_graph_eid_map type;
-			typedef simplegraph_graph_eid_map const_type;
+			typedef gala_graph_eid_map type;
+			typedef gala_graph_eid_map const_type;
 		};
 	};
 
 	template <class Data, class DataRef, class GraphPtr>
-	class simplegraph_graph_data_map
+	class gala_graph_data_map
 	    : public put_get_helper<
 	                  DataRef,
-	                  simplegraph_graph_data_map<Data, DataRef, GraphPtr> > { //
+	                  gala_graph_data_map<Data, DataRef, GraphPtr> > { //
 		public:
 			typedef Data value_type;
 			typedef DataRef reference;
 			typedef unsigned long key_type; // ouch
 			typedef lvalue_property_map_tag category;
-			simplegraph_graph_data_map(GraphPtr g) : m_g(g) { incomplete(); }
+			gala_graph_data_map(GraphPtr g) : m_g(g) { incomplete(); }
 			template <class NodeOrEdge>
 				DataRef operator[](NodeOrEdge x) const { incomplete(); return (*m_g)[x]; }
 		protected:
@@ -838,22 +834,23 @@ namespace boost {
 	};
 
 	template <>
-	struct simplegraph_property_map<vertex_all_t> {
+	struct gala_graph_property_map<vertex_all_t> {
 		VCTtemplate
 		struct bind_ {
 			typedef typename gala::graph<SGARGS>::vertex_type vtype;
-			typedef simplegraph_graph_data_map<vtype, vtype&, gala::graph<SGARGS>*> type;
-			typedef simplegraph_graph_data_map<vtype, const vtype&,
+			typedef gala_graph_data_map<vtype, const vtype&, gala::graph<SGARGS>*> type;
+			typedef gala_graph_data_map<vtype, const vtype&,
 					  const gala::graph<SGARGS>*> const_type;
 		};
 	};
+
 	template <>
-	struct simplegraph_property_map<edge_all_t> {
+	struct gala_graph_property_map<edge_all_t> {
 		VCTtemplate
 		struct bind_ {
 			typedef typename gala::graph<SGARGS>::edge_type etype;
-			typedef simplegraph_graph_data_map<etype, etype&, gala::graph<SGARGS>*> type;
-			typedef simplegraph_graph_data_map<etype, const etype&,
+			typedef gala_graph_data_map<etype, etype&, gala::graph<SGARGS>*> type;
+			typedef gala_graph_data_map<etype, const etype&,
 					  const gala::graph<SGARGS>*> const_type;
 		};
 	};
@@ -861,15 +858,9 @@ namespace boost {
   // g++ 'enumeral_type' in template unification not implemented workaround
 	template<galaPARMS, class Tag>
 	struct property_map<gala::graph<SGARGS>, Tag> {
-		typedef typename simplegraph_property_map<Tag>::template bind_<SGARGS> map_gen;
+		typedef typename gala_graph_property_map<Tag>::template bind_<SGARGS> map_gen;
 		typedef typename map_gen::type type;
 		typedef typename map_gen::const_type const_type;
-	};
-
-	VCTtemplate
-	struct property_map<gala::graph<SGARGS>, vertex_index_t>{ //
-		typedef simplegraph_graph_index_map<SGARGS> type;
-		typedef type const_type;
 	};
 
 	VCTtemplate
@@ -906,19 +897,48 @@ namespace boost {
 		return pmap_type(&g);
 	}
 
+#if 1
+	VCTtemplate
+	struct property_map<gala::graph<SGARGS>, vertex_index_t>{
+		typedef gala_graph_index_map<SGARGS> type;
+		typedef type const_type;
+	};
+
 	VCTtemplate
 	inline typename property_map<gala::graph<SGARGS>, vertex_index_t>::const_type
 	get(vertex_index_t, const gala::graph<SGARGS> &g)
 	{
 //		return pmap_type(&g);
-		return simplegraph_graph_index_map<SGARGS>(g);
+		return gala_graph_index_map<SGARGS>(g);
+	}
+#else
+	VCTtemplate
+	struct property_map<gala::graph<SGARGS>, vertex_index_t>{
+		typedef identity_property_map type;
+		typedef type const_type;
+	};
+
+	VCTtemplate
+	identity_property_map
+	get(vertex_index_t, const gala::graph<SGARGS>&)
+	{
+		return identity_property_map();
+	}
+#endif
+
+	template < galaPARMS, class PropertyTag, class Key>
+	inline typename boost::property_traits<
+	typename boost::property_map<gala::graph<SGARGS>, PropertyTag>::const_type
+	>::value_type
+	get(PropertyTag p, const gala::graph<SGARGS>& g, const Key& key) {
+		return get(get(p, g), key);
 	}
 
 	VCTtemplate
 	typename boost::graph_traits<gala::graph<SGARGS > >::vertices_size_type
 	get(vertex_index_t t, const gala::graph<SGARGS>& g,
 			typename boost::graph_traits< gala::graph<SGARGS> >::vertex_descriptor v)
-	{ untested();
+	{ itested();
 		return get(get(t, g), v);
 	}
 
@@ -927,7 +947,7 @@ namespace boost {
 						  typename boost::graph_traits< gala::graph<SGARGS> >::out_edge_iterator >
 						out_edges(typename boost::graph_traits< gala::graph<SGARGS> >::vertex_descriptor v,
 								gala::graph<SGARGS> const& g)
-	{ untested();
+	{
 		typedef typename boost::graph_traits<gala::graph<SGARGS> >::out_edge_iterator Iter;
 		::gala::graph<SGARGS>* G = const_cast<::gala::graph<SGARGS>*>(&g); // HACK
 		return std::make_pair(Iter(v, G->out_edges(v).begin()), Iter(v, G->out_edges(v).end()));

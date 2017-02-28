@@ -17,6 +17,10 @@
  * 02110-1301, USA.
  *------------------------------------------------------------------
  * identify container types ins template specialization.
+ *
+ * TODO: inherited types.
+ * http://stackoverflow.com/questions/15616730/cannot-trait-an-inherited-class-as-base-with-sfinae
+ *
  */
 
 #ifndef GALA_SFINAE_H
@@ -24,7 +28,10 @@
 
 #include <deque>
 #include <set>
+// #ifdef HAVE_STX_BTREE_SET
 #include <stx/btree_set.h>
+// #endif
+#include <boost/container/flat_set.hpp>
 #include <vector>
 #include <unordered_set>
 #include "trace.h"
@@ -67,9 +74,19 @@ std::set<typename S::value_type, typename S::key_compare, typename S::allocator_
 	static constexpr bool value = true;
 
 };
+//#ifdef HAVE_BTREE_SET...
 template<class S, class T>
 struct is_set<S, typename std::enable_if < std::is_same<
 stx::btree_set<typename S::value_type, typename S::key_compare, typename S::allocator_type >, S
+>::value, any >::type , T>{ //
+
+	typedef T type;
+	static constexpr bool value = true;
+};
+//#endif
+template<class S, class T>
+struct is_set<S, typename std::enable_if < std::is_same<
+boost::container::flat_set<typename S::value_type, typename S::key_compare, typename S::allocator_type >, S
 >::value, any >::type , T>{ //
 
 	typedef T type;

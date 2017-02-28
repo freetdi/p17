@@ -27,7 +27,7 @@ namespace treedec {
 namespace draft {
 
 // immutable overlay
-// make a vertex subset ("bag") of a graph look like a graph
+// make a vertex range of a graph look like a graph
 // this graph is immutable, to allow for efficient storage
 // a callback can be used to add even more edges.
 template<class G_t, class I_t, class S_t, class IG_t, class M_t, class CB_t>
@@ -41,7 +41,7 @@ inline IG_t const& immutable_clone(
      M_t* vdMap, /*=NULL*/
      CB_t* cb
      )
-{ untested();
+{
 //    typedef typename graph_traits<G_t>::immutable_type immutable_type;
     typedef typename boost::graph_traits<IG_t>::vertex_descriptor vertex_descriptor_ig;
 
@@ -53,7 +53,7 @@ inline IG_t const& immutable_clone(
     // map ig vertices (positions) to bag elements (= vertices in G)
     M_t local_vd_map;
     // std::vector<typename boost::graph_traits<G_t>::vertex_descriptor> local_vd_map;
-    if(vdMap){ untested();
+    if(vdMap){
         // use that...
     }else{ untested();
         vdMap = &local_vd_map;
@@ -65,7 +65,7 @@ inline IG_t const& immutable_clone(
     BOOST_AUTO(bi, bbegin);
     BOOST_AUTO(be, bend);
     unsigned i=0;
-    for(; bi!=be; ++bi){ untested();
+    for(; bi!=be; ++bi){ itested();
         // FIXME: pos, vertex_index?
         assert(i < vdMap->size());
         (*vdMap)[i] = *bi;
@@ -79,50 +79,50 @@ inline IG_t const& immutable_clone(
     unsigned s=-1;
     unsigned t=-1;
     unsigned vertices_count;
-    for(; bi!=be; ++bi){ untested();
+    for(; bi!=be; ++bi){
         ++vertices_count;
         
-        if(!cb){ untested();
+        if(!cb){
             BOOST_AUTO(s, get_pos(*bi, G));
             BOOST_AUTO(A, boost::adjacent_vertices(*bi,G));
             for(;A.first!=A.second;++A.first){ itested();
                 BOOST_AUTO(t, get_pos(*A.first, G));
                 boost::add_edge(reverse_map[s], reverse_map[t], ig);
             }
-        }else{ untested();
+        }else{
             BOOST_AUTO(vi, bi);
             ++vi; // skip self loop
 
-            for(; vi!=be; ++vi){ untested();
+            for(; vi!=be; ++vi){
                 bool edg=false;
-                if(boost::edge(*bi, *vi, G).second){ untested();
+                if(boost::edge(*bi, *vi, G).second){
                     edg = true;
                 }else if(!cb){ untested();
-                }else if((*cb)(*bi, *vi)){ untested();
+                }else if((*cb)(*bi, *vi)){
                     edg = true;
-                }else{ untested();
+                }else{
                     // no edge.
                 }
 
-                if(edg){ untested();
+                if(edg){
                     BOOST_AUTO(s, get_pos(*bi, G));
                     BOOST_AUTO(t, get_pos(*vi, G));
                     boost::add_edge(reverse_map[s], reverse_map[t], ig);
-                }else if(s==-1u){ untested();
+                }else if(s==-1u){
                     assert(get_pos(*bi, G)!=-1u);
                     s = get_pos(*bi, G);
                     t = get_pos(*vi, G);
-                }else{ untested();
+                }else{
                 }
             }
         }
     }
     // HACK. not here.
-    if(cb && s!=-1u){ untested();
+    if(cb && s!=-1u){
         /// let MSVS know about a particular new edge
         cb->a = reverse_map[s];
         cb->b = reverse_map[t];
-    }else{ untested();
+    }else{
         // assert(is_clique(ig));
     }
 
@@ -149,7 +149,7 @@ inline IG_t const& immutable_clone(
      I_t bend,
      S_t bag_nv,
      M_t* vdMap /*=NULL*/)
-{ untested();
+{
     typedef typename boost::graph_traits<G_t>::vertex_descriptor vd;
     dummy_hack::cb<vd>* c=NULL;
     return immutable_clone(G, ig, bbegin, bend, bag_nv, vdMap, c);

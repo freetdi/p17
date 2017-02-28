@@ -66,7 +66,7 @@ namespace treedec{
 			std::cout << "\nb " << ++_nva;
 		}
 		void push_back(size_t x)
-		{ untested();
+		{ itested();
 			std::cout << " " << x+_offset;
 		}
 		// kludge: just tell something has been added.

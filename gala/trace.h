@@ -54,8 +54,8 @@ class hp{
 #undef itested
 #ifdef TRACE_ITESTED
 #include <iostream>
-#define itested() \
-	std::cerr << "@@# itested \n@@@:" << __FILE__ << ":" << __LINE__ << ":" << __func__ << "\n"
+#define itested() ( std::cerr << "@@#\n@@@:" \
+     << __FILE__ << ":" << __LINE__ << ":" << __func__ << "\n" )
 #else
 #define itested()
 #endif
@@ -63,8 +63,8 @@ class hp{
 #undef untested
 #ifdef TRACE_UNTESTED
 #include <iostream>
-#define untested() \
-	std::cerr << "@@# untested \n@@@:" << __FILE__ << ":" << __LINE__ << ":" << __func__ << "\n"
+#define untested() ( std::cerr <<  "@@#\n@@@:"<< __FILE__ << ":"<< __LINE__ \
+          <<":" << __func__ << "\n" )
 #else
 #define untested()
 #endif

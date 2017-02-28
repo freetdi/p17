@@ -1,0 +1,18 @@
+PACE17/A [1] submission -- tdlib/experimental and gala snapshot
+
+"make" should build everything needed to run ./tw-exact and ./tw-heuristic
+
+./tw-exact terminates after finish, ./tw-heuristic will wait for a TERM
+signal.
+
+TW-EXACT
+
+is basically Hisao Tamakis implementation that won last year, ported to C++11
+and boost/gala/tdlib. The development has been discontinued in favor of
+tw-heuristic.
+
+TW-HEURISTIC
+
+An exaustive but guided brute force search over elimination orderings.
+
+[1] https://pacechallenge.wordpress.com/pace-2017/track-a-treewidth/

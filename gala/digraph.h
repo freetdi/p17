@@ -20,6 +20,8 @@
 #ifndef DIGRAPH_H
 #define DIGRAPH_H
 
+#include <boost/graph/graph_traits.hpp>
+
 #ifndef HAVE_MYBOOL
 #define HAVE_MYBOOL
 class mybool{ //
@@ -347,7 +349,7 @@ template<class G>
 
 		unsigned vn=0;
 		for(;v!=vend;++v){ untested();
-			auto vpos=treedec::get_pos(*v, *_g);
+			auto vpos=boost::get(boost::vertex_index, *_g, *v);
 			if(disabled[vpos]){ untested();
 			}else{ untested();
 				idxMap[vn] = *v;
@@ -359,7 +361,7 @@ template<class G>
 				BOOST_AUTO(e, E.first);
 				BOOST_AUTO(eend, E.second);
 				for(;e!=eend;++e){ itested();
-					if(!disabled[treedec::get_pos(*e, *_g)]){ untested();
+					if(!disabled[boost::get(boost::vertex_index, *_g, *v)]){ untested();
 						//std::cerr << "push " << vn << "(" << *v << ")" << " -> " << *e << "\n";
 						_edges.push_back(*e); // later: translate to diG vertex
 						_path.push_back(false);
@@ -389,7 +391,7 @@ template<class G>
 		}
 
 		for(auto s : SRC){ untested();
-			auto p=treedec::get_pos(s, *_g);
+			auto p=boost::get(boost::vertex_index, *_g, s);
 			assert(p<boost::num_vertices(*_g));
 			assert(!disabled[p]);
 			assert(_idxInverseMap[p] < vn);

@@ -27,7 +27,6 @@ class hp{
 // interactively tested
 #undef itested
 #ifdef TRACE_ITESTED
-#include <iostream>
 #define itested() \
 	std::cerr << "@@# itested \n@@@:" << __FILE__ << ":" << __LINE__ << ":" << __func__ << "\n"
 #else
@@ -36,7 +35,6 @@ class hp{
 
 #undef untested
 #ifdef TRACE_UNTESTED
-#include <iostream>
 #define untested() \
 	std::cerr << "@@# untested \n@@@:" << __FILE__ << ":" << __LINE__ << ":" << __func__ << "\n"
 #else

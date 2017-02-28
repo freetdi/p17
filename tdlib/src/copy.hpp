@@ -1,5 +1,11 @@
+//TODO: header
+
 #ifndef TD_COPY_HPP
 #define TD_COPY_HPP
+
+#ifdef USE_GALA
+#include <gala/boost_copy.h>
+#endif
 
 #include <boost/graph/copy.hpp>
 
@@ -18,8 +24,7 @@ void copy_trace(const S& s, T& t /*, M map=identity */)
         incomplete();
     }else if(!boost::is_multigraph<T>()){
         boost::copy_graph(s, t);
-    }else if(boost::is_directed(t)){ untested();
-        incomplete(); // what if s has multiedges?
+    }else if(boost::is_directed(t)){
         boost::copy_graph(s, t);
     }else{ untested();
         t = MOVE(T(boost::num_vertices(s)));
@@ -30,13 +35,12 @@ void copy_trace(const S& s, T& t /*, M map=identity */)
             auto v=boost::target(*b.first, s);
             if(u<v){
                 boost::add_edge(u, v, t);
-            }else{
             }
         }
     }
 }
 
-}
+} //namespace treedec
 
 #endif
 

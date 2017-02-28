@@ -22,14 +22,8 @@
 
 #include "boost.h"
 #include "sfinae.h"
-
-// HACK
-// #include <tdlib/degree.hpp> // BUG. degree includes view stuff
-// #include <tdlib/graph.hpp>
 #include <tdlib/graph_traits.hpp>
-#include <tdlib/degree.hpp>
-// #include <tdlib/platform.hpp>
-
+//#include <tdlib/treedec_traits.hpp>
 #include <boost/graph/iteration_macros.hpp>
 //hack
 #include <stx/btree_set.h>
@@ -61,7 +55,7 @@ typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS, V
 #endif
 #endif
 
-namespace treedec{ // here??
+namespace treedec { // here??
 
 template<class CB, class G>
 class callback_proxy{ //
@@ -238,12 +232,12 @@ template<galaPARMS, class CB>
 struct sghelp_hack< ECT, VCT, VDP, CFG, CB,
 	typename gala::sfinae::is_vec_tpl<ECT>::type > { //
 static size_t mcah(
-		typename boost::graph_traits<gala::graph<SGARGS> >::vertex_descriptor c,
-		gala::graph<SGARGS>& g,
+		typename boost::graph_traits<gala::graph<SGARGS> >::vertex_descriptor,
+		gala::graph<SGARGS>&,
 // 		typename treedec::graph_traits< gala::graph<SGARGS> >::bag_type& bag,
 		 typename treedec::treedec_traits<
-		   typename treedec::treedec_chooser<  gala::graph<SGARGS>  >::type>::bag_type& bag,
-		CB* cb)
+		   typename treedec::treedec_chooser<  gala::graph<SGARGS>  >::type>::bag_type&,
+		CB*)
 { untested();
 	incomplete();
 	assert(0);
@@ -578,7 +572,7 @@ void check(gala::graph<SGARGS> const& g)
 
 #ifdef DEBUG
 			assert(boost::edge(*i,*aI,g).second);
-			if(g.is_directed()){ untested();
+			if(!g.is_directed()){ untested();
 				assert(boost::edge(*aI,*i,g).second);
 			}
 #endif
@@ -586,7 +580,7 @@ void check(gala::graph<SGARGS> const& g)
 		// if !multiedge
 		assert(X.size() == boost::out_degree(*i, g));
 #ifdef DEBUG
-		if(g.is_directed()){ untested();
+		if(!g.is_directed()){ untested();
 			for(boost::tie(I,E) = boost::vertices(g); I!=E; ++I){ itested();
 				assert(boost::edge(*I,*i,g).second == boost::edge(*i,*I,g).second);
 			}
@@ -599,7 +593,7 @@ void check(gala::graph<SGARGS> const& g)
 	struct deg_chooser<gala::graph<SGARGS> >{
 		typedef gala::graph<SGARGS> G;
 		typedef CFG<G> cfg;
-		typedef typename treedec::DEGS<G> type;
+		typedef typename cfg::degs_type type;
 		typedef typename G::vertex_type vd_type;
 
 #if __cplusplus < 201103L

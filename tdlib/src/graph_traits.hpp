@@ -40,6 +40,7 @@ struct bagsize_t{
 
 namespace boost{
 
+
 template<class G>
 unsigned& get(treedec::bagsize_t, G&){
 	return treedec::bagsize_t().dummy;
@@ -48,6 +49,7 @@ unsigned& get(treedec::bagsize_t, G&){
 } // boost
 
 namespace treedec{
+
 
 struct Vertex_NF{
     bool visited;
@@ -97,8 +99,12 @@ namespace detail{
 
 template<class G_t>
 struct default_directed_select{
-   typedef typename boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> type;
-	// typedef typename boost::adjacency_list<boost::setS, boost::vecS, boost::directedS> type;
+   typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS> type;
+};
+
+template<class X, class Y, class Z>
+struct default_directed_select< boost::adjacency_list<X, Y, boost::directedS, Z> >{
+   typedef boost::adjacency_list<X, Y, boost::directedS, Z> type;
 };
 
 } // detail
@@ -189,17 +195,6 @@ inline unsigned get_vd(const G&, const typename boost::graph_traits<G>::vertex_d
 
 namespace treedec{
 
-template<typename G_t>
-inline typename boost::graph_traits<G_t>::vertices_size_type
-   get_pos(typename boost::graph_traits<G_t>::vertex_descriptor v, G_t const& G)
-{
-    return boost::get(boost::vertex_index, G, v);
-}
-
-} // treedec
-
-namespace treedec{
-
 // chooose deg implementation for graph backend.
 // to be accessed through graph_traits
 template<class G_t>
@@ -240,6 +235,30 @@ struct graph_callback{ // fixme: union of the above?
     virtual void operator()(vertex_descriptor)=0;
     virtual void operator()(vertex_descriptor, vertex_descriptor)=0;
 };
+
+template<class G>
+inline std::pair<typename boost::graph_traits<G>::edge_descriptor, bool>
+add_edge(typename boost::graph_traits<G>::vertex_descriptor x,
+		   typename boost::graph_traits<G>::vertex_descriptor y, G& g);
+
+template<class G>
+inline typename boost::graph_traits<G>::edges_size_type num_edges(G const& g);
+
+template<class G>
+struct graph_helper{
+    // stub. incomplete.
+	static_assert(sizeof(G)==0, "need specialization");
+
+	template<class S>
+	static void close_neighbourhood(S& c, G const&){
+		static_assert(sizeof(S)==0, "need specialization");
+	};
+	template<class S>
+	static void open_neighbourhood(S& c, G const&){
+		static_assert(sizeof(S)==0, "need specialization");
+	};
+};
+
 
 } // treedec
 

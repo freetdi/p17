@@ -30,6 +30,7 @@
 #include <stx/btree_set.h>
 #include <type_traits>
 		
+#include <boost/serialization/static_warning.hpp>
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -98,31 +99,124 @@ void my_push_back(std::vector<short unsigned>& c, E e)
 	c.push_back(e);
 }
 /*--------------------------------------------------------------------------*/
+// TODO: move to bits header
+template<class S, class X=void>
+struct container_helper {
+	template<class C, class E>
+	static bool exists(C& c, E e) { itested();
+		return c.find(e) != c.end();
+	}
+	template<class C, class E>
+	static void add(C& c, E e) {
+		bool done=c.insert(e).second;
+		assert(done); (void)done;
+	}
+	template<class C, class E>
+	static bool insert(C& c, E e) {
+		bool done=c.insert(e).second;
+		return done;
+	}
+	template<class C, class E>
+	static bool remove(C& c, E e) { untested();
+		return c.erase(e);
+	}
+};
+template<class S>
+struct container_helper<S, typename sfinae::is_vector<S>::type > {
+	template<class C, class E>
+	static bool exists(C&, E) { incomplete();
+		return false;
+	}
+	template<class C, class E>
+	static void add(C& c, E e){
+		// not really, just TDLIB
+		// assert(std::find(c.begin(), c.end(), e)==c.end());
+		c.push_back(e);
+	}
+	template<class C, class E>
+	static bool insert(C& c, E e){ itested();
+		if(std::find(c.begin(), c.end(), e)==c.end()){ itested();
+			c.push_back(e);
+			return true;
+		}else{
+			return false;
+		}
+	}
+	template<class C, class E>
+	static bool remove(C& c, E e) {
+		BOOST_STATIC_WARNING(false); // inefficient.
+		auto what=std::find(c.begin(), c.end(), e);
+		if(what==c.end()){
+			return false;
+		}else{
+			c.erase(what);
+			return true;
+		}
+	}
+};
+template<class S>
+struct container_helper<S, typename sfinae::is_hash<S>::type > {
+	template<class C, class E>
+	static bool exists(C&, E)
+	{ incomplete();
+		return false;
+	}
+};
+/*--------------------------------------------------------------------------*/
 template<class C, class E>
 bool edge_insert(C& c, E e)
-{ itested();
-	return c.insert(e).second;
-}
-template<class E>
-bool edge_insert(std::vector<unsigned>& c, E e)
 {
-	if(std::find(c.begin(), c.end(), e)==c.end()){
+	return container_helper<C>::insert(c, e);
+}
+#if 0
+template<class E, class C>
+bool edge_insert(C& c, E e, typename std::enable_if< sfinae::is_vector<C>::value, bool>::type=false)
+{ untested();
+	if(std::find(c.begin(), c.end(), e)==c.end()){ untested();
 		c.push_back(e);
 		return true;
-	}else{
+	}else{ untested();
 		return false;
 	}
 }
-template<class E>
-bool edge_insert(std::vector<short unsigned>& c, E e)
+#endif
+/*--------------------------------------------------------------------------*/
+template<class C, class E>
+void edge_add(C& c, E e)
 {
-	if(std::find(c.begin(), c.end(), e)==c.end()){
-		c.push_back(e);
-		return true;
-	}else{
-		return false;
-	}
+	container_helper<C>::add(c, e);
 }
+#if 0
+template<class E, class C>
+bool edge_add(C& c, E e, typename std::enable_if< sfinae::is_vector<C>::value, bool>::type=false)
+{ untested();
+	c.push_back(e);
+	return true;
+}
+#endif
+/*--------------------------------------------------------------------------*/
+// stub. maybe merge into some storage helper.
+template<bool s,
+         template<class T, typename... > class ECT,
+         class X=void>
+struct order_helper {
+	template<class V>
+	static void do_it(V&){
+		// nop
+	}
+};
+template<template<class T, typename... > class ECT>
+struct order_helper<true, ECT,
+	typename tovoid < typename std::enable_if<
+	 sfinae::is_seq_tpl<ECT>::value
+	>::type >::type > { //
+	template<class V>
+	static void do_it(V& v){
+		for( auto& i : v){
+			std::sort(i.begin(), i.end());
+		}
+	}
+};
 /*--------------------------------------------------------------------------*/
 template<template<class T, typename... > class S, class X=void>
 struct outedge_helper {
@@ -150,33 +244,7 @@ struct outedge_helper<ECT, typename sfinae::is_vec_tpl<ECT>::type > {
 		}
 	}
 	template<class C, class E>
-	bool exists(C& c, E e)
-	{ incomplete();
-		return false;
-	}
-};
-/*--------------------------------------------------------------------------*/
-// TODO: move to bits header
-template<class S, class X=void>
-struct container_helper {
-	template<class C, class E>
-	static bool exists(C& c, E e)
-	{ itested();
-		return c.find(e) != c.end();
-	}
-};
-template<class S>
-struct container_helper<S, typename sfinae::is_vector<S>::type > {
-	template<class C, class E>
-	static bool exists(C&, E)
-	{ incomplete();
-		return false;
-	}
-};
-template<class S>
-struct container_helper<S, typename sfinae::is_hash<S>::type > {
-	template<class C, class E>
-	static bool exists(C&, E)
+	bool exists(C&, E)
 	{ incomplete();
 		return false;
 	}
@@ -190,9 +258,20 @@ struct vertex_helper{ //
 		return container_helper<VC>::exists(v, w);
 	}
 	template<class T, class V, class VC>
+	static void add(T& v, V& w, VC*)
+	{
+		// BUG? insert vs add.
+		return container_helper<VC>::add(v, w);
+	}
+	template<class T, class V, class VC>
 	static void insert(T& v, V& w, VC*)
 	{ itested();
 		edge_insert(v, w);
+	}
+	template<class T, class V, class VC>
+	static bool remove(T& v, V& w, VC*)
+	{ itested();
+		return container_helper<VC>::remove(v, w);
 	}
 	template<class VL>
 	static bool is_valid(VDP const& v, VL const& _v)
@@ -220,6 +299,17 @@ struct vertex_helper<vertex_ptr_tag>{ //
 	static void insert(T& v, V&, VC* wp)
 	{ itested();
 		v.n.insert(wp);
+	}
+	template<class T, class V, class VC>
+	static void add(T& v, V&, VC* wp)
+	{ untested();
+		container_helper<VC>::add(v.n, wp);
+	}
+	template<class T, class V, class VC>
+	static bool remove(T&, V&, VC*)
+	{ untested();
+		incomplete();
+		return false;
 	}
 	template<class VL>
 	static bool is_valid(typename VL::value_type const* v, VL const& _v)
@@ -261,9 +351,13 @@ struct iter_helper{ //
 	static size_t fill_pos(iter first, iter last, VL& _v, bool dir=false,
 			bool dups=true)
 	{
-		if(is_multiedge){
-			if(is_directed){
-			}else{
+		unsigned all=0;
+		if(is_multiedge){ untested();
+			if(is_directed){ untested();
+			}else{ untested();
+				if(dups){ untested();
+				}else{ untested();
+				}
 			}
 		}else{
 			if(is_directed){ untested();
@@ -271,29 +365,32 @@ struct iter_helper{ //
 			}
 		}
 		auto nv=_v.size(); (void)nv;
+		trace1("fill_pos", nv);
 		assert(!dir); (void) dir;
 		size_t c=0;
-		for(;first!=last; ++first){ itested();
+		for(;first!=last; ++first){
+			++all;
 			unsigned v=(*first).first;
 			unsigned w=(*first).second;
+			trace2("fill_pos", v, w);
 			assert(v<nv);
 			assert(w<nv);
 			// FIXME: use add_edge...
 			bool doit;
-			if(is_multiedge){
+			if(is_multiedge){ untested();
 				// use template arg!
 				doit=true;
 			}else if(!dups){
 				doit=true;
-			}else if(vertex_helper<VDP>::contains(_v[v], w, &_v[w])){ untested();
+			}else if(vertex_helper<VDP>::contains(_v[v], w, &_v[w])){
 				doit=false;
-			}else{ untested();
+			}else{
 				doit=true;
 			}
 
 			if(doit){
-				vertex_helper<VDP>::insert(_v[v], w, &_v[w]);
-				vertex_helper<VDP>::insert(_v[w], v, &_v[v]);
+				vertex_helper<VDP>::add(_v[v], w, &_v[w]);
+				vertex_helper<VDP>::add(_v[w], v, &_v[v]);
 				++c;
 			}else{
 			}
@@ -303,10 +400,10 @@ struct iter_helper{ //
 
 };
 /*--------------------------------------------------------------------------*/
-inline size_t source(std::pair<size_t, size_t> const& p){ untested();
+inline size_t source(std::pair<size_t, size_t> const& p){
 	return p.first;
 }
-inline size_t target(std::pair<size_t, size_t> const& p){ untested();
+inline size_t target(std::pair<size_t, size_t> const& p){
 	return p.second;
 }
 /*--------------------------------------------------------------------------*/
@@ -315,8 +412,8 @@ struct iter_helper<c_iter_tag, VDP, /*directed*/ true, is_multiedge> {
 
 	template<class iter, class VL>
 	static size_t fill_pos(iter first, iter last, VL& _v, bool dir=false, bool dups=true)
-	{ untested();
-		if(dups){ untested();
+	{
+		if(dups){
 		}else{ untested();
 		}
 		assert(dir); (void) dir;
@@ -342,6 +439,8 @@ struct iter_helper<std::bidirectional_iterator_tag, VDP, is_directed, is_multied
 template<class iter, class VL>
 static size_t fill_pos(iter first, iter last, /* size_t nv, */ VL& _v, bool dir, bool dup=false)
 { untested();
+	if(dup){incomplete();
+	}
 	if(dir){ incomplete();
 	}
 	typedef typename VL::value_type v_t;
@@ -366,9 +465,9 @@ static size_t fill_pos(iter first, iter last, /* size_t nv, */ VL& _v, bool dir,
 		v_t& V = *_V;
 		v_t& W = *_W;
 		vertex_helper<VDP>::insert(V, W, _W);
-		if(is_directed){
+		if(is_directed){ untested();
 			// hmm.
-		}else{
+		}else{ untested();
 			vertex_helper<VDP>::insert(W, V, _V);
 		}
 		++c;
@@ -438,6 +537,15 @@ struct storage_base{ //
 	}
 };
 /*--------------------------------------------------------------------------*/
+template<class vertex_type>
+struct edge_type_ : std::pair<vertex_type, vertex_type>{
+	typedef std::pair<vertex_type, vertex_type> base;
+	template<class vt, class vt2>
+	edge_type_(vt a, vt2 b) : base(a,b) {
+	}
+	edge_type_() : base() {
+	}
+};
 /*--------------------------------------------------------------------------*/
 STtemplate
 struct storage : storage_base<STARGS>{ //
@@ -447,7 +555,7 @@ struct storage : storage_base<STARGS>{ //
 	using typename storage_base<STARGS>::container_type;
 	typedef typename vs::vertex_index_type vertex_index_type;
 	typedef typename vs::const_type const_vertex_type;
-	typedef std::pair<vertex_type, vertex_type> edge_type;
+	typedef edge_type_<vertex_type> edge_type;
 	typedef ECT<vertex_type> edge_container_type; // -> storage base?
 	typedef VCT<vertex_> VL;
 	static bool need_rewire()
@@ -479,7 +587,7 @@ struct storage : storage_base<STARGS>{ //
 		_v[v].clear();
 	}
 	static edge_container_type& out_edges(vertex_type& v, container_type& _v)
-	{
+	{ itested();
 		return _v[v];
 	}
 	static edge_container_type& out_edges(const_vertex_type& v, container_type& _v)
@@ -487,7 +595,7 @@ struct storage : storage_base<STARGS>{ //
 		return _v[v];
 	}
 	static const edge_container_type& out_edges(const_vertex_type& v, const container_type& _v)
-	{ untested();
+	{ itested();
 		return _v[v];
 	}
 	static void remove_edge_single(vertex_index_type v, vertex_index_type w,
@@ -520,7 +628,7 @@ struct storage<ECT, VCT, vertex_ptr_tag> : public storage_base<ECT, VCT, vertex_
 	typedef typename bits::vertex_selector<ECT,VDP>::type vertex_type;
 	typedef typename bits::vertex_selector<ECT,VDP>::vertex_index_type vertex_index_type;
 	typedef typename bits::vertex_selector<ECT,VDP>::const_type const_vertex_type;
-	typedef std::pair<vertex_type, vertex_type> edge_type;
+	typedef edge_type_<vertex_type> edge_type;
 	typedef VCT<vertex_> container_type;
 	typedef ECT<vertex_type> edge_container_type;
 	typedef VCT<vertex_> VL;
@@ -536,7 +644,7 @@ struct storage<ECT, VCT, vertex_ptr_tag> : public storage_base<ECT, VCT, vertex_
 		vertex_type offset = (vertex_type) (uintptr_t(&*_v.begin()) - uintptr_t(&*old_begin));
 		if(!offset){
 		}else{
-			std::cerr << "add rewire " << _v.size() << "\n";
+			// std::cerr << "add rewire " << _v.size() << "\n";
 			rewire_helper<STARGS>::rewire_nodes(_v, offset);
 		}
 		return &_v.back();
@@ -604,8 +712,40 @@ public:
 }; //storage<vertex_ptr_tag>
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
-template< STPARMS, bool is_directed >
-struct edge_helper : public storage<STARGS> { //
+template<STPARMS, bool is_directed, bool is_simple>
+struct edge_helper : public storage<STARGS> {
+};
+/*--------------------------------------------------------------------------*/
+template<STPARMS>
+struct edge_helper<STARGS, false, false> : public storage<STARGS>{
+	// undirected implementation.
+	using typename storage<STARGS>::edge_type;
+	using typename storage<STARGS>::vertex_type;
+	using storage<STARGS>::out_edges;
+	// to storage base?!
+	template<class N, class VC>
+	static std::pair<edge_type, bool> add_edge(vertex_type a, vertex_type b,
+	                                           N& num_edges, VC& vc)
+	{ untested();
+		// trace0("undiredted add_edge");
+		vertex_type* A=&a;
+		vertex_type* B=&b;
+		// don't attempt to avoid dups
+		edge_add(out_edges(*B, vc), *A);
+		edge_add(out_edges(*A, vc), *B);
+		++num_edges;
+		return std::make_pair(edge_type(*A, *B), true);
+	}
+
+	typedef typename storage<STARGS>::container_type vertex_container_type;
+	template<class E>
+	static void add_reverse_edges(vertex_container_type& /*_v*/, E& )
+	{ unreachable();
+	}
+};
+/*--------------------------------------------------------------------------*/
+template<STPARMS>
+struct edge_helper<STARGS, false, true> : public storage<STARGS>{
 	// undirected implementation.
 	using typename storage<STARGS>::edge_type;
 	using typename storage<STARGS>::vertex_type;
@@ -615,16 +755,10 @@ struct edge_helper : public storage<STARGS> { //
 	static std::pair<edge_type, bool> add_edge(vertex_type a, vertex_type b,
 	                                           N& num_edges, VC& vc)
 	{
+
 		// trace0("undiredted add_edge");
 		vertex_type* A=&a;
 		vertex_type* B=&b;
-#ifdef ADDEDGESWAP
-		// does not really help...
-		if(out_edges(a).size()>out_edges(b).size()){ untested();
-			std::swap(A,B);
-		}else{untested();
-		}
-#endif
 		size_t s = out_edges(*A, vc).size();
 		edge_insert(out_edges(*A, vc), (*B));
 		// since the graph is undirected,
@@ -632,7 +766,7 @@ struct edge_helper : public storage<STARGS> { //
 		bool added=false;
 		if(s == out_edges(*A, vc).size()){
 		}else{
-			edge_insert(out_edges(*B, vc), *A);
+			edge_add(out_edges(*B, vc), *A);
 			++num_edges;
 			added = true;
 		}
@@ -646,8 +780,8 @@ struct edge_helper : public storage<STARGS> { //
 	}
 };
 /*--------------------------------------------------------------------------*/
-template<STPARMS>
-struct edge_helper<STARGS, true>
+template<STPARMS, bool is_simple>
+struct edge_helper<STARGS, true, is_simple>
 	// directed implementation.
     : public storage<STARGS>{ //
 	typedef typename storage<STARGS>::container_type vertex_container_type;
@@ -748,6 +882,7 @@ struct reverse_helper<ECT, VCT, VDP,
 	template<class E>
 	static void make_symmetric(vertex_container_type& _v, E& e, bool oriented)
 	{
+		// oriented: "there is only one edge {u,v}"
 		trace3("make_symmetric", oriented, e, _v.size());
 #ifndef NDEBUG
 		auto ebefore=e;
@@ -760,7 +895,7 @@ struct reverse_helper<ECT, VCT, VDP,
 			howmany[i++] = vertex.size();
 			checksum+= vertex.size();
 		}
-		trace3("make_symmetric", oriented, e, checksum);
+		trace4("make_symmetric", oriented, e, checksum, _v.size());
 		assert(checksum==e || !oriented);
 		// ssg only. for now.
 		if(oriented){ untested();
@@ -790,7 +925,7 @@ struct reverse_helper<ECT, VCT, VDP,
 
 #ifndef NDEBUG
 		trace3("make_symm", oriented, ebefore, e);
-		if(oriented){ untested();
+		if(oriented){
 			assert(ebefore*2==e);
 		}else{
 		}
@@ -856,7 +991,7 @@ struct iter{ //
 		return vertex_iterator(0);
 	}
 	static const_vertex_iterator vbegin(const typename storage<STARGS>::VL&)
-	{ untested();
+	{
 		return vertex_iterator(0);
 	}
 	static vertex_iterator vend(typename storage<STARGS>::VL& v)
@@ -868,7 +1003,7 @@ struct iter{ //
 		return vertex_iterator(v.size());
 	}
 	static VDP deref(vertex_iterator v)
-	{
+	{ itested();
 		return *v;
 	}
 	// FIXME: is this "iter"?
@@ -943,7 +1078,7 @@ struct iter<ECT, VCT, vertex_ptr_tag>{ //
 /*--------------------------------------------------------------------------*/
 template<class C>
 void prealloc(C const&, size_t /*howmany*/)
-{ untested();
+{
 }
 /*--------------------------------------------------------------------------*/
 // typedef vertex_ptr_tag use_pointers;
@@ -954,7 +1089,9 @@ struct graph_cfg_default;
 namespace detail{
 template<class CFG, class X=void>
 struct is_directed_select {
-	typedef boost::mpl::false_ type; // uuh, obsolete?
+#if 0
+	typedef boost::mpl::false_ type; // obsolete. don't use.
+#endif
 	static constexpr bool value=false;
 	operator bool() const {return false;}
 };
@@ -965,9 +1102,52 @@ struct is_directed_select<CFG,
 	static constexpr bool value=CFG::is_directed;
 };
 /*--------------------------------------------------------------------------*/
+template<class CFG, template<class x, class ...> class ECT, class X=void>
+struct is_ordered_select {
+	// "sets" are ordered for now.
+	// careful with hashsets...
+	static constexpr bool value=sfinae::is_set_tpl<ECT>::value;
+	operator bool() const {return value;}
+};
+template<class CFG, template<class x, class ...> class ECT>
+struct is_ordered_select<CFG, ECT,
+	typename tovoid < typename std::enable_if< CFG::force_ordering >::type >::type >
+{ //
+	static constexpr bool value=
+		CFG::force_ordering || sfinae::is_set_tpl<ECT>::value;
+};
+/*--------------------------------------------------------------------------*/
+template<class CFG, template<class x, class ...> class ECT, class X=void>
+struct is_simple_select {
+	// static constexpr bool value=sfinae::is_set_tpl<ECT>::value; FUTURE DEFAULT
+	static constexpr bool value=true;
+	operator bool() const {return value;}
+};
+template<class CFG, template<class x, class ...> class ECT>
+struct is_simple_select<CFG, ECT,
+	typename tovoid < typename std::enable_if<CFG::force_simple> >::type >
+{ //
+	static constexpr bool value=
+		CFG::force_simple || sfinae::is_set_tpl<ECT>::value;
+	operator bool() const {return value;}
+};
+/*--------------------------------------------------------------------------*/
+template<class CFG, class X=void>
+struct is_symmetric_select {
+	static constexpr bool value=false;
+	operator bool() const {return value;}
+};
+template<class CFG>
+struct is_symmetric_select<CFG,
+	typename tovoid < typename std::enable_if< CFG::force_symmetric >::type >::type >
+{ //
+	static constexpr bool value=CFG::force_symmetric;
+};
+/*--------------------------------------------------------------------------*/
 template<template<class T, typename... > class ECT,
          class X=void>
 struct is_multiedge_select {
+	// BUG, contradicts add_edge...
 	static constexpr bool value=true;
 };
 template<template<class T, typename... > class ECT>
@@ -999,9 +1179,55 @@ struct is_nn<STARGS,
 // struct gala::detail::is_nn<uset, std::vector, gala::vertex_ptr_tag, void>
 /*--------------------------------------------------------------------------*/
 template<class Gsrc, class Gtgt, bool srcDir, bool tgtDir,
-	bool srcCont=false, bool tgtCont=false>
+	bool srcCont=false, bool tgtCont=false,
+	bool srcOrd=false, bool tgtOrd=false>
 struct copy_helper{
 	static void assign(Gsrc const&, Gtgt&);
+};
+/*--------------------------------------------------------------------------*/
+template<class Gsrc, class Gtgt, class X=void>
+struct move_helper{
+	static void move(Gsrc const&& s, Gtgt& t){ untested();
+
+		t._v=std::move(s._v);
+
+		if(!s.is_symmetric() && t.is_symmetric()){ untested();
+			if(t.is_simple){ untested();
+				t._num_edges=0;
+				symmetrify(t);
+			}else{ incomplete();
+			}
+		}else{untested();
+			t._num_edges = s._num_edges;
+		}
+	}
+	static void symmetrify(Gtgt& g){
+		// add (b,a) for (a,b)
+		// then check if all edges are simple,
+		// sets? hmm x is not ordered...
+		size_t i=0;
+		for(auto& x : g._v){ itested();
+			for(auto y : x){ itested();
+				// HACK
+				assert(i!=y); // no self loops.
+				trace2("rev", y, i);
+				g._v[y].push_back(i);
+			}
+			++i;
+		}
+		for(auto& x : g._v){ itested();
+			std::sort(x.begin(), x.end()); // for now.
+			x.erase( unique( x.begin(), x.end() ), x.end() );
+			g._num_edges += x.size();
+			trace1("", x.size());
+		}
+
+		if(g.is_directed()){
+		}else{untested();
+			trace1("correcting edgecount", g._num_edges);
+			g._num_edges/=2;
+		}
+	}
 };
 /*--------------------------------------------------------------------------*/
 } // namespace detail
@@ -1025,35 +1251,75 @@ public: // types
 	
 	using vs = bits::vertex_selector<ECT,VDP>;
 
+public: // BUG. private & helper friends..
 	typedef CFG<this_type> myCFG;
 	static constexpr bool is_directed_v=detail::is_directed_select<myCFG>::value;
+	static constexpr bool is_symmetric_v=!is_directed_v || detail::is_symmetric_select<myCFG>::value;
+	static constexpr bool is_ordered_v=detail::is_ordered_select<myCFG, ECT>::value;
+	static constexpr bool is_simple_v=detail::is_simple_select<myCFG, ECT>::value;
+	static constexpr bool is_multiedge_v=!detail::is_simple_select<myCFG, ECT>::value;
+
+public:
 	static constexpr bool is_directed() {
 		return is_directed_v;
 	}
+	// indicate that edge iterators are ordered.
 	static constexpr bool is_ordered() {
-		// for now.
-		return sfinae::is_set_tpl<ECT>::value;
+		return is_ordered_v;
 	}
+	// indicate that there are no parallel edges
+	static constexpr bool is_simple() { //
+		return is_simple_v;
+	}
+	static constexpr bool is_symmetric() { //
+		return is_symmetric_v;
+	}
+	// is_multiGRAPH?!
+	static constexpr bool is_multiedge() { //
+		return is_multiedge_v;
+	}
+
 	static constexpr bool is_nn_v=detail::is_nn<ECT, VCT, VDP>::value;
 
 	typedef typename vs::type vertex_type;
 	typedef typename vs::const_type const_vertex_type;
 	typedef typename vs::stype vertex_;
 	typedef typename vs::vertices_size_type vertices_size_type;
+#if 0
 	typedef typename vs::edges_size_type edges_size_type;
-	// typedef size_t edges_size_type; // ??
+#else
+	typedef size_t edges_size_type; // ??
+#endif
 	typedef typename vs::vertex_index_type vertex_index_type;
 // private: hmm not yet.
-	typedef typename bits::storage<STARGS> storage;
-	typedef typename bits::edge_helper<STARGS, is_directed_v> edge_helper;
+	using storage=bits::storage<STARGS>;
+	using edge_helper=bits::edge_helper<STARGS, is_directed_v, is_simple_v>;
+
 	typedef typename bits::reverse_helper<STARGS> reverse_helper;
 	typedef typename bits::iter<STARGS> iter;
 	typedef edgecontainer<vertex_type> EL;
 
-	static constexpr bool is_multiedge_v=detail::is_multiedge_select<ECT>::value;
-	static constexpr bool is_multiedge() {
-		return is_multiedge_v;
-	}
+public: // reconfig
+	template<template<class G> class new_config>
+	struct reconfig{
+		typedef graph<ECT, VCT, VDP, new_config> type;
+	};
+	template<class GG>
+	struct my_undirected_config : public CFG<GG> {
+		static constexpr bool is_directed=false;
+	};
+	template<class GG>
+	struct my_symmetric_config : public CFG<GG> {
+		static constexpr bool force_symmetric=true;
+	};
+	template<class GG>
+	struct my_unsymmetric_config : public CFG<GG> {
+		static constexpr bool force_symmetric=false;
+	};
+
+	typedef typename reconfig<my_undirected_config>::type undirected_type;
+	typedef typename reconfig<my_symmetric_config>::type symmetric_type;
+	typedef typename reconfig<my_unsymmetric_config>::type unsymmetric_type;
 public:
 	typedef typename storage::container_type VL;
 	typedef typename storage::container_type vertex_container_type;
@@ -1073,31 +1339,33 @@ public: // range-based loops support aliases
 	typedef typename storage::edge_type edge_type;
 
 	typedef std::pair<iterator, out_vertex_iterator> edge_iterator;
+private: // inacessible sfinae
+	struct pdummy{};
 public: // construct
 	graph(const graph& x) : _num_edges(0)
-	{ untested();
+	{
 		assign_same(x); // FIXME op=?
 	}
    template<template<class T, typename... > class ECT2, \
             template<class T, typename... > class VCT2, \
             class VDP2, \
             template<class G> class CFG2>
-	graph(graph<ECT2,VCT2,VDP2,CFG2> const& x)
+	graph(graph<ECT2, VCT2, VDP2, CFG2> const& x)
 	: _num_edges(0)
-	{ untested();
+	{
 
 		detail::copy_helper<graph<ECT2,VCT2,VDP2,CFG2>, graph,
 			  graph<ECT2,VCT2,VDP2,CFG2>::is_directed_v, is_directed_v
 			>::assign(x, *this);
 		assert(num_vertices()==x.num_vertices());
 
-		if( !is_directed() && x.is_directed() ){ untested();
+		if( !is_directed() && x.is_directed() ){
 			// anything.
-		}else{ untested();
+		}else{
 			assert(_num_edges==x._num_edges);
 		}
 #ifndef NDEBUG
-		for(auto i = begin(); i!=end(); ++i){ untested();
+		for(auto i = begin(); i!=end(); ++i){
 			assert(is_valid(iter::deref(i)));
 			//   		for(auto& j : vertices()){ untested();
 			//   //			assert(is_edge(&j,&i) == is_edge(&i,&j));
@@ -1106,10 +1374,112 @@ public: // construct
 #endif
 	}
 public: // move
+#if 0
+   template<template<class G> class CFG2>
+	graph( graph<ECT, VCT, VDP, CFG2> const&& )
+	{
+		incomplete();
+	}
+#endif
+
+   template<template<class G> class CFG2>
+	graph( graph<ECT, VCT, VDP, CFG2> const&&x,
+			typename std::enable_if<
+			    !std::is_same< graph<ECT, VCT, VDP, CFG2>, this_type>::value
+			  && this_type::is_directed_v
+			  && this_type::is_simple_v
+			  && this_type::is_symmetric_v
+			//  &&!graph<ECT, VCT, VDP, CFG2>::is_simple_v
+			  && graph<ECT, VCT, VDP, CFG2>::is_directed_v
+			  &&!graph<ECT, VCT, VDP, CFG2>::is_symmetric_v
+			  &&!graph<ECT, VCT, VDP, CFG2>::is_ordered_v,
+				 pdummy>::type=pdummy())
+	    : _v(std::move(x._v)),
+	      _num_edges(0)
+	{
+		detail::move_helper<graph<ECT, VCT, VDP, CFG2>, this_type >::symmetrify(*this);
+	}
+#if 1
+   template<template<class G> class CFG2>
+	graph( graph<ECT, VCT, VDP, CFG2> const&&x,
+			typename std::enable_if<
+			     this_type::is_simple_v
+			  && this_type::is_directed_v
+			  && this_type::is_symmetric_v
+			  && graph<ECT, VCT, VDP, CFG2>::is_simple_v
+			  && graph<ECT, VCT, VDP, CFG2>::is_directed_v
+			  &&!graph<ECT, VCT, VDP, CFG2>::is_symmetric_v
+			  && graph<ECT, VCT, VDP, CFG2>::is_ordered_v,
+				 pdummy>::type=pdummy())
+	    : _v(std::move(x._v)),
+	      _num_edges(x._num_edges)
+	{ itested();
+		BOOST_STATIC_ASSERT(sfinae::is_set_tpl<ECT>::value);
+		size_t i=0;
+		for(auto& x : _v){ itested();
+			for(auto y : x){ itested();
+				// HACK
+				assert(i!=y); // no self loops.
+				trace2("rev", y, i);
+				_num_edges+=_v[y].insert(i).second;
+			}
+			++i;
+		}
+
+		if(is_directed()){ itested();
+		}else{untested();
+			_num_edges/=2;
+		}
+	}
+#endif
+   template<template<class G> class CFG2>
+	graph( graph<ECT, VCT, VDP, CFG2> const&&x,
+			typename std::enable_if<
+			    !std::is_same< graph<ECT, VCT, VDP, CFG2>, this_type>::value
+			  &&!this_type::is_symmetric_v
+			  && graph<ECT, VCT, VDP, CFG2>::is_directed_v
+			  &&!graph<ECT, VCT, VDP, CFG2>::is_simple_v
+			  &&!graph<ECT, VCT, VDP, CFG2>::is_symmetric_v,
+				 pdummy>::type=pdummy())
+	    : _v(std::move(x._v)),
+	      _num_edges(x._num_edges)
+	{ untested();
+		incomplete();
+	}
+   template<template<class G> class CFG2>
+	graph( graph<ECT, VCT, VDP, CFG2> const&&x,
+			typename std::enable_if<
+			     graph<ECT, VCT, VDP, CFG2>::is_simple_v
+			  &&!graph<ECT, VCT, VDP, CFG2>::is_directed_v
+			  &&!graph<ECT, VCT, VDP, CFG2>::is_symmetric_v,
+				 pdummy>::type=pdummy())
+	    : _v(std::move(x._v)),
+	      _num_edges(x._num_edges)
+	{ untested();
+		unreachable(); // undirected graphs are symmetric.
+	}
+   template<template<class G> class CFG2>
+	graph( graph<ECT, VCT, VDP, CFG2> const&& x,
+			typename std::enable_if<
+			    !std::is_same< graph<ECT, VCT, VDP, CFG2>, this_type>::value
+			  && graph<ECT, VCT, VDP, CFG2>::is_simple_v
+			  &&!graph<ECT, VCT, VDP, CFG2>::is_directed_v
+			  && graph<ECT, VCT, VDP, CFG2>::is_symmetric_v,
+				 pdummy>::type=pdummy())
+	    : _v(std::move(x._v)),
+	      _num_edges(x._num_edges)
+	{
+		if(is_directed()){
+			_num_edges*=2;
+		}else{untested();
+		}
+	}
+	// move self.
 	graph(graph&& x)
 	    : _v(std::move(x._v)),
 	      _num_edges(x._num_edges)
 	{
+
 //		assert(nonvoid)
 		// assert(num_vertices()==x.num_vertices()); no. _v has gone ...
 		for(auto i = begin(); i!=end(); ++i){
@@ -1124,7 +1494,7 @@ public: // move
 	graph(vertices_size_type n=0, edges_size_type m=0)
 	    : _v(n), _num_edges(0)
 	{
-		if(m){ untested();
+		if(m){
 			EL a;
 			prealloc(a, 2*m);
 		}
@@ -1142,7 +1512,6 @@ public: // Required by Iterator Constructible Graph
 		return fill_in_edges(r.first, r.second, true);
 	}
 public: //assign
-
    template<template<class T, typename... > class ECT2, \
             template<class T, typename... > class VCT2, \
             class VDP2, \
@@ -1155,9 +1524,9 @@ public: //assign
 	// does not work. same structure often sufficient...
 	graph& assign_same(graph<SGARGS> const& x);
 
-	graph& operator=(graph&& x)
-	{
-		trace2("move assign", size_t(num_vertices()), size_t(num_edges()));
+public: // move assign
+	graph& operator=(graph&& x) {
+		trace2("move assign_same", size_t(num_vertices()), size_t(num_edges()));
 		trace2("move assign", size_t(x.num_vertices()), size_t(x.num_edges()));
 		trace2("move assign", is_directed(), x.is_directed());
 #ifndef NDEBUG
@@ -1171,6 +1540,9 @@ public: //assign
 			assert(2*x.num_edges() == c);
 		}
 #endif
+		if (!x.is_ordered() && is_ordered()){ unreachable();
+		}else{
+		}
 		if (&x!=this){
 			_num_edges = x._num_edges;
 			_v = std::move(x._v);
@@ -1188,44 +1560,32 @@ public: //assign
 #endif
 		return *this;
 	}
-private:
-
+   template<template<class T, typename... > class ECT2, \
+            template<class T, typename... > class VCT2, \
+            class VDP2, \
+            template<class G> class CFG2>
+	graph& operator=(graph<ECT2,VCT2,VDP2,CFG2> const&&);
 public: // construct
-#if 0 // does not work
-	// construct a graph from a boost graph
-	// warning: assuming vertex_descriptors are 0,1,2 ...
-	template <typename G_t>
-	explicit graph(G_t const &G)
-	    : _num_edges(0)
-	{ untested();
-		assign(G);
-	}
-#endif
+// private:??
 	template <typename G_t>
 	void assign(G_t const& G);
 public: // iterators
-	iterator begin()
-	{
+	iterator begin() {
 		return iter::vbegin(_v);
 	}
-	iterator end()
-	{
+	iterator end() {
 		return iter::vend(_v);
 	}
-	const_iterator cbegin() const
-	{ untested();
+	const_iterator cbegin() const {
 		return iter::vbegin(_v);
 	}
-	const_iterator cend() const
-	{ untested();
+	const_iterator cend() const {
 		return iter::vend(_v);
 	}
-	const_iterator begin() const
-	{ untested();
+	const_iterator begin() const {
 		return iter::vbegin(_v);
 	}
-	const_iterator end() const
-	{
+	const_iterator end() const {
 		return iter::vend(_v);
 	}
 	// will not work for non-vector VCT...
@@ -1235,24 +1595,22 @@ public: // iterators
 		return iter::pos(v, _v);
 	}
 public: // BUG: should not expose this...?
-	vertex_container_type& vertices()
-	{ // incomplete(); later
+	vertex_container_type& vertices() { untested();
+		// incomplete(); later
 		return _v;
 	}
-	const vertex_container_type& vertices() const
-	{ // incomplete(); later
+	const vertex_container_type& vertices() const { untested();
+	  	// incomplete(); later
 		return _v;
 	}
 public:
-	void clear()
-	{ untested();
+	void clear() {
 		// inefficient (maybe not, with proper allocator...)
 		_v.resize(0);
 		_num_edges = 0;
 	}
 	// "reserve" maybe?!
-	void reshape(size_t nv, size_t ne=0, bool directed_edges=false)
-	{
+	void reshape(size_t nv, size_t ne=0, bool directed_edges=false) {
 		(void)directed_edges;
 		if(ne) {
 			// inefficient.
@@ -1264,27 +1622,23 @@ public:
 		}
 		_num_edges = 0;
 	}
-	bool is_edge(const_vertex_type a, const_vertex_type b) const
-	{ untested();
+	bool is_edge(const_vertex_type a, const_vertex_type b) const { untested();
 		return a->n.find(const_cast<vertex_type>(b)) != a->n.end();
 	}
 private:
 	//O(log d), where d is the degree of a
-	void remove_edge_single(vertex_type a, vertex_type b)
-	{ untested();
+	void remove_edge_single(vertex_type a, vertex_type b) { untested();
 		assert(a!=b);
 		storage::remove_edge_single(a, b, _v);
 		--_num_edges;
 	}
 private: // required by contruct from iterator
 	// add edge from vertex positions \in [0, nv)
-	void add_pos_edge(vertex_index_type a, vertex_index_type b)
-	{ untested();
+	void add_pos_edge(vertex_index_type a, vertex_index_type b) { untested();
 		storage::add_pos_edge(a, b, _v);
 	}
 	// same, but from strings.
-	void add_pos_edge(const char* a, const char* b)
-	{ untested();
+	void add_pos_edge(const char* a, const char* b) { untested();
 		storage::add_pos_edge(a, b, _v);
 	}
 public:
@@ -1297,8 +1651,7 @@ public:
 	EL& out_edges(const_vertex_type& /*v*/);
 	const EL& out_edges(const_vertex_type& /*v*/) const;
 	//O(1)
-	vertex_index_type num_vertices() const
-	{
+	vertex_index_type num_vertices() const {
 		return _v.size();
 	}
 	//O(1)
@@ -1309,8 +1662,9 @@ public:
 	size_t num_edges_debug(){
 #ifdef DEBUG
 		auto ne=0;
-		for(auto& v:_v){ untested();
-			for(auto& w:v){ untested();
+		for(auto& v:_v){ itested();
+			for(auto const& x : v){ itested();
+				(void)x;
 				++ne;
 			}
 		}
@@ -1329,8 +1683,11 @@ public:
 	//O(num_edges+num_vertices)
 	void make_symmetric(bool oriented=false)
 	{
-		assert(is_directed());
-		reverse_helper::make_symmetric(_v, _num_edges, oriented);
+		if(!is_directed()){
+		}else if(is_symmetric()){ itested();
+		}else{
+			reverse_helper::make_symmetric(_v, _num_edges, oriented);
+		}
 		num_edges_debug(); // will notice if you were lying.
 	}
 	void add_reverse_edges(bool oriented=true)
@@ -1339,8 +1696,7 @@ public:
 		return make_symmetric(oriented);
 	}
 	//O(log max{d_1, d_2}), where d_1 is the degree of a and d_2 is the degree of b
-	std::pair<edge_type, bool> add_edge(vertex_type a, vertex_type b)
-	{
+	std::pair<edge_type, bool> add_edge(vertex_type a, vertex_type b) {
 		assert(is_valid(a));
 		assert(is_valid(b));
 		return edge_helper::add_edge(a, b, _num_edges, _v);
@@ -1350,9 +1706,10 @@ public:
 	void remove_out_edge_if(vertex_type a, PRED & p)
 	{ // vector only
 		auto& oa=out_edges(a);
-		assert(oa.size()<_num_edges);
+		assert(oa.size()<=_num_edges);
 		while(oa.size()){
-			if(p(std::make_pair(a,oa.back()))){
+			edge_type e(a, oa.back());
+			if(p(e)){
 				--_num_edges;
 				oa.pop_back();
 			}else{
@@ -1368,13 +1725,14 @@ public:
 		auto nn=oa.begin();
 		if(nn!=oa.end())
 		for(++nn; nn!=oa.end();ii=nn++) {
-			if(p(std::make_pair(a,*ii))){ itested();
+			edge_type e(a, *ii);
+			if(p(e)){ itested();
 				--_num_edges;
 				*ii=oa.back();
 				oa.pop_back();
 
 				while(nn!=oa.end()){
-					if(p(std::make_pair(a,oa.back()))){
+					if(p(edge_type(a, oa.back()))){
 						--_num_edges;
 						oa.pop_back();
 					}else{
@@ -1390,15 +1748,43 @@ public:
 		}
 	}
 	// O(log max{d_1, d_2}), where d_1 is the degree of a and d_2 is the degree of b
-	void remove_edge(vertex_type a, vertex_type b)
-	{ untested();
-		// must exist, for now.
-		assert(exists_edge(a,b));
-		assert(exists_edge(b,a));
-		out_edges(a).erase(b);
-		out_edges(b).erase(a);
-		assert(_num_edges);
-		--_num_edges;
+	// check=false: "i am sure this edge exists"
+	void remove_edge(vertex_type a, vertex_type b, bool check=true)
+	{
+		if(check){
+			// lets see..
+		}else{ untested();
+			assert(bits::vertex_helper<VDP>::contains(_v[a], b, &_v[b]));
+		}
+		bool done=bits::vertex_helper<VDP>::remove(_v[a], b, &_v[b]);
+
+		if(is_directed()){
+			// only one edge involved.
+			if(check){
+				if(done){
+					--_num_edges;
+				}else{
+				}
+			}else{ untested();
+				--_num_edges;
+			}
+		}else{ // undirected.
+			if(check){ untested();
+				// if there was an edge, we need to take care of the back edge
+				if(done){ untested();
+					assert(bits::vertex_helper<VDP>::contains(_v[b], a, &_v[a]));
+					bool done2=bits::vertex_helper<VDP>::remove(_v[b], a, &_v[a]);
+					assert(done2); (void)done2;
+					--_num_edges;
+				}else{ untested();
+				}
+			}else{ untested();
+				assert(bits::vertex_helper<VDP>::contains(_v[b], a, &_v[a]));
+				bool done2=bits::vertex_helper<VDP>::remove(_v[b], a, &_v[a]);
+				assert(done2==done); (void)done2;
+				--_num_edges;
+			}
+		}
 	}
 	void contract(vertex_type& vd, vertex_type into);
 	vertex_index_type degree(const_vertex_type who) const
@@ -1413,6 +1799,14 @@ public:
 	vertex_index_type degree() const
 	{ untested();
 		return storage::degree(_v);
+	}
+public:
+	// BUG. don't use
+	void hacksort(){
+		incomplete();
+		for( auto v : *this){
+			std::sort(_v[v].begin(), _v[v].end());
+		}
 	}
 public:
 	// O(n + deg(v)*log(D)), where D is the maximum of the degrees of the
@@ -1468,10 +1862,6 @@ public: // directions
 	struct my_directed_config : public CFG<GG> { //
 		static constexpr bool is_directed=true;
 	};
-	template<class GG>
-	struct my_undirected_config : public CFG<GG> { //
-		static constexpr bool is_directed=false;
-	};
 public: // experimental...?
 
 	// does this really work? directed/undirected are binary incompatible...
@@ -1486,19 +1876,17 @@ public: // experimental...?
 		typedef size_t edges_size_type;
 		static edges_size_type num_edges(GG const &g)
 		{
+			incomplete(); // staged for removal.
 			return 2*g._num_edges; // BUG
 			return 2*reinterpret_cast<base_type const&>(g).num_edges();
 		}
 		static void set_num_edges(edges_size_type e, GG &g)
 		{ untested();
+			incomplete(); // staged for removal.
 			assert(! (e%2) );
 			g._num_edges = e/2; // BUG/incomplete
 //			reinterpret_cast<base_type const&>(g).set_num_edges();
 		}
-	};
-	template<template<class G> class new_config>
-	struct reconfig{
-		typedef graph<ECT, VCT, VDP, new_config> type;
 	};
 
 	template<class self, bool dir>
@@ -1511,23 +1899,22 @@ public: // experimental...?
 	};
 	typedef typename directed_self<this_type, is_directed_v>::type directed_self_type;
 	typedef typename reconfig<my_directed_config>::type directed_type;
-	typedef typename reconfig<my_undirected_config>::type undirected_type;
 
 	directed_self_type const& directed_view() const
-	{ untested();
+	{
 		return reinterpret_cast<directed_self_type const&>(*this);
 	}
 	// more dangerous...
-	// private & friends?
-	directed_self_type& directed_view()
-	{
+	// this is OBSOLETE, don't use.
+	directed_self_type& directed_view() {
+		unreachable();
 		return reinterpret_cast<directed_self_type&>(*this);
 	}
 }; // class graph
 /*--------------------------------------------------------------------------*/
 template<class G>
 struct graph_cfg_default {
-	typedef default_DEGS<G> degs_type;
+	typedef default_DEGS<G> degs_type; // BUG
 	typedef typename G::edges_size_type edges_size_type;
 //	typedef size_t edges_size_type; // uuh
 	static edges_size_type num_edges(G const& g);
@@ -1539,7 +1926,7 @@ struct graph_cfg_default {
 VCTtemplate
 typename graph<SGARGS>::edges_size_type
 graph<SGARGS>::num_edges() const
-{
+{ itested();
 	return CFG<graph<SGARGS> >::num_edges(*this);
 }
 /*--------------------------------------------------------------------------*/
@@ -1555,7 +1942,8 @@ VCTtemplate
 template <class EI1, class EI2>
 void graph<SGARGS>::fill_in_edges(EI1 first, EI2 last, bool possible_duplicates)
 {
-	if(possible_duplicates){incomplete();
+	if(possible_duplicates){ untested();
+		//incomplete();
 		// need to take more care of edge count
 	}else{
 	}
@@ -1576,7 +1964,7 @@ template <class EdgeIterator>
 graph<SGARGS>::graph(EdgeIterator first, EdgeIterator last,
                      vertices_size_type nv, edges_size_type ne)
     : graph(nv, ne)
-{ untested();
+{
 	_num_edges=0;
 
 	assert(_v.size()==nv);
@@ -1585,7 +1973,7 @@ graph<SGARGS>::graph(EdgeIterator first, EdgeIterator last,
 
 #ifndef NDEBUG
 	unsigned c = 0;
-	for(auto& i : _v){ untested();
+	for(auto& i : _v){ itested();
 		c += i.size();
 	}
 	assert(is_directed() || 2*num_edges() == c);
@@ -1595,7 +1983,7 @@ graph<SGARGS>::graph(EdgeIterator first, EdgeIterator last,
 VCTtemplate
 typename graph<SGARGS>::EL const&
     graph<SGARGS>::out_edges(const_vertex_type& v) const
-{ untested();
+{ itested();
 	assert(is_valid(v));
 	return storage::out_edges(v, _v);
 }
@@ -1603,7 +1991,7 @@ typename graph<SGARGS>::EL const&
 VCTtemplate
 typename graph<SGARGS>::EL&
 	graph<SGARGS>::out_edges(const_vertex_type& v)
-{ untested();
+{
 	assert(is_valid(v));
 	return storage::out_edges(v, _v);
 }
@@ -1611,14 +1999,14 @@ typename graph<SGARGS>::EL&
 VCTtemplate
 typename graph<SGARGS>::EL&
 	graph<SGARGS>::out_edges(vertex_type& v)
-{
+{ itested();
 	return storage::out_edges(v, _v);
 }
 /*--------------------------------------------------------------------------*/
 VCTtemplate
 typename graph<SGARGS>::EL& // const?!
 	graph<SGARGS>::out_edges(vertex_type& v) const
-{
+{ itested();
 	assert(is_valid(v));
 	auto&_V = const_cast<graph<SGARGS>*>(this)->_v;
 	return storage::out_edges(v, _V);
@@ -1637,26 +2025,51 @@ VCTtemplate
             class VDP2, \
             template<class G> class CFG2>
 graph<SGARGS>& graph<SGARGS>::operator=(graph<ECT2,VCT2,VDP2,CFG2> const& x)
-{ untested();
+{
+	typedef graph<ECT2,VCT2,VDP2,CFG2> Gsrc;
+	if((void*)&x==(void*)this){
+		return *this;
+	}else{
+	}
+
+	trace2("op=&", Gsrc::is_directed(), is_directed_v);
+
+	detail::copy_helper<Gsrc, graph,
+		 Gsrc::is_directed_v, is_directed_v,
+		 Gsrc::is_nn_v, is_nn_v,
+	    Gsrc::is_ordered_v, is_ordered() >::assign(x, *this);
+
+	constexpr bool sortneeded=!x.is_ordered() && is_ordered();
+	trace1("op=", sortneeded);
+	bits::order_helper<sortneeded, ECT>::do_it(_v);
+	return *this;
+}
+/*--------------------------------------------------------------------------*/
+VCTtemplate
+   template<template<class T, typename... > class ECT2, \
+            template<class T, typename... > class VCT2, \
+            class VDP2, \
+            template<class G> class CFG2>
+graph<SGARGS>& graph<SGARGS>::operator=(graph<ECT2,VCT2,VDP2,CFG2> const&& x)
+{
 	typedef graph<ECT2,VCT2,VDP2,CFG2> Gsrc;
 	if((void*)&x==(void*)this){ untested();
 		return *this;
-	}else{ untested();
+	}else{
 	}
 
-	trace2("op=", Gsrc::is_directed_v, is_directed_v);
+	trace2("op=&&", Gsrc::is_directed(), is_directed_v);
 
-	detail::copy_helper<Gsrc, graph,
-		 Gsrc::is_directed_v,
-		 is_directed_v,
-		 Gsrc::is_nn_v,
-		 is_nn_v>::assign(x, *this);
+	detail::move_helper<Gsrc, graph>::move(std::move(x), *this);
+
+	constexpr bool needed=!x.is_ordered() && is_ordered();
+	bits::order_helper<needed, ECT>::do_it(_v);
 	return *this;
 }
 /*--------------------------------------------------------------------------*/
 VCTtemplate
 graph<SGARGS>& graph<SGARGS>::operator=(graph<SGARGS> const& x)
-{ untested();
+{
 // 
 // detail::copy_helper<graph<SGARGS>, graph<SGARGS> >::merge(x, *this, IGNOREDUPS)
 // return *this
@@ -1665,13 +2078,13 @@ graph<SGARGS>& graph<SGARGS>::operator=(graph<SGARGS> const& x)
 /*--------------------------------------------------------------------------*/
 VCTtemplate
 graph<SGARGS>& graph<SGARGS>::assign_same(graph<SGARGS> const& x)
-{ untested();
+{
 	typedef graph<ECT, VCT, VDP, CFG> oG;
 	typedef typename oG::const_iterator other_const_iterator;
 	typedef typename oG::const_vertex_type other_const_vertex_type;
 
 	if (intptr_t(&x) == intptr_t(this)) { untested();
-	}else if (num_vertices()==0){ itested();
+	}else if (num_vertices()==0){
 		detail::copy_helper<graph, graph,
 			is_directed_v, is_directed_v,
 			is_nn_v, is_nn_v>::assign(x, *this);
@@ -1726,20 +2139,23 @@ graph<SGARGS>& graph<SGARGS>::assign_same(graph<SGARGS> const& x)
 /*--------------------------------------------------------------------------*/
 namespace detail{
 /*--------------------------------------------------------------------------*/
-template<class oG, class G, bool X, bool Y, bool srcCont, bool tgtCont>
-void copy_helper<oG, G, X, Y, srcCont, tgtCont>::assign(oG const& src, G& tgt)
-{ untested();
+template<class oG, class G, bool X, bool Y, bool srcCont, bool tgtCont,
+bool srcOrd, bool tgtOrd>
+void copy_helper<oG, G, X, Y,
+                 srcCont, tgtCont,
+					  srcOrd, tgtOrd>::assign(oG const& src, G& tgt)
+{
 	auto& g=src;
 //	typedef graph<ECT2, VCT2, VDP2, CFG2> oG; // source graph
 	size_t nv = g.num_vertices();
 	size_t ne = g.num_edges();
-	trace6("assign_",nv, ne, tgt.num_vertices(), tgt.num_edges(), srcCont, tgtCont);
+	trace6("assign_", nv, ne, tgt.num_vertices(), tgt.num_edges(), srcCont, tgtCont);
 	assert(!tgt.is_directed() || src.is_directed()); // use other helper
 //	auto psize=tgt._v.size();
 	tgt._v.resize(nv);
 
 	// BUG. inefficient.
-	for(auto vi = tgt.begin(); vi!=tgt.end(); ++vi){ untested();
+	for(auto vi = tgt.begin(); vi!=tgt.end(); ++vi){
 		typename G::vertex_type v=G::iter::deref(vi);
 		tgt.out_edges(v).clear();
 	}
@@ -1770,7 +2186,7 @@ void copy_helper<oG, G, X, Y, srcCont, tgtCont>::assign(oG const& src, G& tgt)
 	}
 
 	assert(tgt._num_edges == 0);
-	if(i!=nv){
+	if(i!=nv){ untested();
 		std::cerr << i << " " << nv << "\n";
 		assert(false);
 	}
@@ -1791,26 +2207,26 @@ void copy_helper<oG, G, X, Y, srcCont, tgtCont>::assign(oG const& src, G& tgt)
 	}
 //	trace3("debug", tgt.is_directed, src.is_directed, num_og_edges);
 	if(tgt._num_edges == 2*ne){ untested();
-	}else if(tgt.num_edges() == ne){ untested();
+	}else if(tgt.num_edges() == ne){
 	}else if(tgt.is_directed() && !g.is_directed() ){ untested();
 		trace2("bug", tgt._num_edges, ne );
 		tgt._num_edges = ne;
 		assert(tgt.num_edges() == 2*g.num_edges());
 		incomplete();
-	}else if(tgt.is_directed() && g.is_directed() ){ untested();
+	}else if(tgt.is_directed() && g.is_directed() ){
 
 //		trace5("assign..1 1",nv, ne, tgt.num_vertices(), tgt.num_edges(), GG->num_edges());
 //		trace2("assign...",GG->_num_edges, tgt._num_edges);
 //		tgt._num_edges = 1; // HACK
 		// this is dangerous?!
-		if(tgt._num_edges !=  tgt.num_edges()){ untested();
+		if(tgt._num_edges !=  tgt.num_edges()){
 		}else{ untested();
 		}
 
 		// OUCH. this does not work. must amend edgecount later.
 		// assert(tgt.num_edges() == g.num_edges() || tgt.num_edges() == 2*g.num_edges());
 
-	}else if( src.is_directed() && !tgt.is_directed()){ untested();
+	}else if( src.is_directed() && !tgt.is_directed()){
 		
 	}else{ untested();
 		unreachable();
@@ -1823,15 +2239,14 @@ void copy_helper<oG, G, X, Y, srcCont, tgtCont>::assign(oG const& src, G& tgt)
 
 #ifndef NDEBUG
 	// incomplete...
-	for(auto i = tgt.begin(); i!=tgt.end(); ++i){ untested();
+	for(auto i = tgt.begin(); i!=tgt.end(); ++i){
 		assert(tgt.is_valid(G::iter::deref(i)));
 		//   		for(auto& j : vertices()){ untested();
 		//   //			assert(is_edge(&j,&i) == is_edge(&i,&j));
 		//   		}
 	}
 #endif
-}
-// ; // copy_helper
+} // copy_helper
 //
 #if 0 // use default
 template<class Gsrc, class Gtgt>
@@ -1842,13 +2257,13 @@ struct copy_helper<Gsrc, Gtgt,  boost::mpl::true_,  boost::mpl::false_ >
 template<class Gsrc, class Gtgt>
 struct copy_helper<Gsrc, Gtgt, false, true > {
 	static void assign(Gsrc const& src, Gtgt& tgt)
-	{ untested();
+	{
 		trace2("assigning undirected to directed", src.num_edges(), tgt.num_edges());
 		tgt = src.directed_view();
 		trace2("done undirected to directed", src.num_edges(), tgt.num_edges());
 		
 //		HACK HACK
-      if(tgt._num_edges == tgt.num_edges()){ untested();
+      if(tgt._num_edges == tgt.num_edges()){
 			// incomplete(); better cross fingers!
 			// tgt._num_edges = src.num_edges()*2;
 		}else{ untested();
@@ -1860,7 +2275,7 @@ struct copy_helper<Gsrc, Gtgt, false, true > {
 template<class Gsrc, class Gtgt>
 struct copy_helper<Gsrc, Gtgt, false, true, true, true> {
 	static void assign(Gsrc const& src, Gtgt& tgt)
-	{ untested();
+	{
 		// for now
 		return copy_helper<Gsrc, Gtgt, false, true, false, false>::assign(src, tgt);
 	}
@@ -1871,8 +2286,8 @@ namespace detail{
 	template<class S, class T, class X=void>
 	struct set_hlp{
 		static void copy_set(S const& src, T& tgt)
-		{ untested();
-			for(auto w : src){ itested();
+		{
+			for(auto w : src){
 				tgt.push_back(w);
 			}
 		}
@@ -1886,7 +2301,7 @@ namespace detail{
 
 		static void copy_set(S const& src, T& tgt)
 		{ untested();
-			for(auto w : src){ itested();
+			for(auto w : src){ untested();
 				tgt.insert(w); // FIXME: hint, if ordered.
 			}
 		}
@@ -1894,7 +2309,7 @@ namespace detail{
 	template<class S>
 	struct set_hlp<S, S> {
 		static void copy_set(S const& src, S& tgt)
-		{ untested();
+		{
 			tgt = src;
 			// applymap...?
 		}
@@ -1904,7 +2319,7 @@ namespace detail{
 template<class Gsrc, class Gtgt>
 struct copy_helper<Gsrc, Gtgt, true, false > {
 	static void assign(Gsrc const& src, Gtgt& tgt)
-	{ untested();
+	{
 //		must weed out double edges?
 		trace2("assigning directed to undirected", src.num_edges(), tgt.num_edges());
 		tgt.directed_view() = src;
@@ -1921,7 +2336,7 @@ struct copy_helper<Gsrc, Gtgt, true, false > {
 template<class Gsrc, class Gtgt>
 struct copy_helper<Gsrc, Gtgt, true, true, true, true > {
 	static void assign(Gsrc const& src, Gtgt& tgt)
-	{ untested();
+	{
 		auto& g=src;
 	//	typedef graph<ECT2, VCT2, VDP2, CFG2> oG; // source graph
 		size_t nv = g.num_vertices();
@@ -1931,9 +2346,9 @@ struct copy_helper<Gsrc, Gtgt, true, true, true, true > {
 	//	auto psize=tgt._v.size();
 		tgt._v.resize(nv);
 
-		if(tgt.num_edges()){ untested();
+		if(tgt.num_edges()){
 			// BUG. inefficient.
-			for(auto vi = tgt.begin(); vi!=tgt.end(); ++vi){ untested();
+			for(auto vi = tgt.begin(); vi!=tgt.end(); ++vi){
 				typename Gtgt::vertex_type v=Gtgt::iter::deref(vi);
 				tgt.out_edges(v).clear();
 			}
@@ -1963,7 +2378,7 @@ struct copy_helper<Gsrc, Gtgt, boost::mpl::true_, boost::mpl::true_>
 }; // copy_helper
 #endif
 /*--------------------------------------------------------------------------*/
-} // namespace detail
+} // detail
 /*--------------------------------------------------------------------------*/
 // TODO: runtime info?
 VCTtemplate
@@ -2110,6 +2525,57 @@ void graph_cfg_default<G>::set_num_edges(typename G::edges_size_type x, G& g)
 { untested();
 	g._num_edges = x;
 }
+/*--------------------------------------------------------------------------*/
+namespace detail{
+/*--------------------------------------------------------------------------*/
+template<class SRC, class TGT>
+struct move_helper<SRC, TGT,
+                   typename tovoid < typename std::enable_if<
+                        TGT::is_ordered() && !SRC::is_ordered()
+           &&   TGT::is_simple() && !SRC::is_simple()
+                    >::type >::type
+                  >
+{ //
+	static void move(SRC const&& src, TGT& tgt){ untested();
+		incomplete(); // need to remove dups!
+		if ((void*)&tgt==(void*)&src){ untested();
+		}else{ itested();
+			tgt._num_edges = src._num_edges;
+			tgt._v = std::move(src._v);
+//			x._v.clear(); // hmm, does not work for sl
+//			tgt._num_edges = 0;
+			tgt.hacksort();
+		}
+	}
+	static void symmetrify(TGT& g){ untested();
+		incomplete();
+	}
+}; // move_helper
+/*--------------------------------------------------------------------------*/
+template<class SRC, class TGT>
+struct move_helper<SRC, TGT,
+                   typename tovoid < typename std::enable_if<
+                        TGT::is_ordered() && !SRC::is_ordered()
+           && (  TGT::is_simple() == SRC::is_simple() )
+                    >::type >::type
+                  >
+{ //
+	static void move(SRC const&& src, TGT& tgt){
+		// BUG: check the other flags?!
+		if ((void*)&tgt==(void*)&src){ untested();
+		}else{
+			tgt._num_edges = src._num_edges;
+			tgt._v = std::move(src._v);
+//			x._v.clear(); // hmm, does not work for sl
+//			tgt._num_edges = 0;
+			tgt.hacksort();
+		}
+	}
+	static void symmetrify(TGT& x){ untested();
+		incomplete();
+	}
+};
+} // detail
 /*--------------------------------------------------------------------------*/
 } // gala
 /*--------------------------------------------------------------------------*/

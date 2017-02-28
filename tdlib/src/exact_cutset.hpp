@@ -47,8 +47,12 @@
 #include "lower_bounds.hpp"
 #include "treedec.hpp"
 #include "overlay.hpp"
+#include "container_traits.hpp"
 
+#ifdef HAVE_STX_BTREE_SET_H
 #include <stx/btree_set>
+#endif
+
 #include <boost/container/flat_set.hpp>
 #include <boost/graph/adjacency_matrix.hpp>
 /// HACK
@@ -57,8 +61,9 @@
 // #define EC_COMP_SET boost::container::flat_set
 #define EC_COMP_SET std::vector
 
+#include "graph_util.hpp"
 
-typedef mybool EXCUT_BOOL;
+typedef BOOL EXCUT_BOOL;
 
 namespace treedec{
 
@@ -701,7 +706,7 @@ bool excut_worker<G>::try_candidate_set(cjob_t& comp_job,
         visited[pos] = true;
     }
 
-    assert_connected(*comp_job.cut_prefix_end, mask_cc, _g);
+//    assert_connected(*comp_job.cut_prefix_end, mask_cc, _g);
 
     auto const& nvis(visited);
 
@@ -709,11 +714,13 @@ bool excut_worker<G>::try_candidate_set(cjob_t& comp_job,
     auto N=make_neighbourhood_range(comp_job.cut_prefix_end, cand_end, _g, nvis);
     assert(N.first!=N.second);
 
+    auto visitedm=util::make_incidence_mask(visited);
+
     // build components neighboring the candidate set.
     BOOST_AUTO(cmps_range,
             make_components_range(
                 N.first, N.second,
-                _g, &visited, &cr_scratch, EXCUT_BOOL()));
+                _g, visitedm, &cr_scratch));
 
     // iterate through components
     // break if one fails.
@@ -855,10 +862,12 @@ bool excut_worker<G>::work_candidates(cjob_t& comp_job)
         }
         // use in next loop.
         candidate_cache.push_back(*candi);
+#if COUNTERS
         if(neighbours){
             neighbours = candi.is_neighbour();
         }else{
         }
+#endif
     }
 
     return success;
@@ -872,7 +881,7 @@ bool excut_worker<G>::explore_cutsets(CRB const& cut_ext_bag,
          mask_t& cc_mask_in, CRI /*celt*/, unsigned cmps, nrs* nrsa, td_vd cut_ext)
 {
     assert( &cut_ext_bag == &bagdraft::bag(*this, cut_ext)); // no. root?
-    assert(count_unmasked(cc_mask_in) == cmps);
+//    assert(count_unmasked(cc_mask_in) == cmps);
 //    assert(count_range(cbegin, cend) == cmps);
     (void) cmps;
     assert(cut_ext_bag.size() + cmps > _bagsize);
@@ -911,7 +920,7 @@ bool excut_worker<G>::explore_cutsets(CRB const& cut_ext_bag,
     comp_job.cut_extip1 = topp1;
 //    assert(*top == cut_ext);
 
-    assert_connected(*comp_job._candidates_b, mask_cc, _g);
+//    assert_connected(*comp_job._candidates_b, mask_cc, _g);
 
     success = work_candidates(comp_job);
     recycle(&comp_job);
@@ -948,12 +957,12 @@ std::pair<unsigned,unsigned> find_max_degree_vertex(G const& g)
 namespace draft{
 
 template <typename G_t,
-        template<class G_> class config=algo::default_config>
+        template<class G_, class ...> class config=algo::default_config>
 class exact_cutset { // baseclass?
 public:
     exact_cutset(G_t const& g)
         : _g(g) {}
-    ~exact_cutset() { untested();
+    ~exact_cutset() {
     }
 public:
     template<class T_t>
@@ -968,7 +977,7 @@ private:
     G_t const& _g;
 };
 
-template <typename G_t, template<class G_> class config>
+template <typename G_t, template<class G_, class ...> class config>
 template<class T_t>
 bool exact_cutset<G_t, config>::try_it(T_t &T, unsigned bagsize)
 {
@@ -996,7 +1005,7 @@ bool exact_cutset<G_t, config>::try_it(T_t &T, unsigned bagsize)
         return false;
     }
 
-    detail::excut_control<G_t> c(_g, bagsize);
+    treedec::detail::excut_control<G_t> c(_g, bagsize);
 
     VECTOR_TD<G_t>& results=c._results;
 
@@ -1005,7 +1014,7 @@ bool exact_cutset<G_t, config>::try_it(T_t &T, unsigned bagsize)
         return false;
     }
 
-    typedef typename detail::excut_worker<G_t>::T_vertex_descriptor T_vertex_descriptor;
+    typedef typename treedec::detail::excut_worker<G_t>::T_vertex_descriptor T_vertex_descriptor;
 
     assert(boost::num_vertices(results)==0);
     T_vertex_descriptor root=boost::add_vertex(results);
@@ -1048,7 +1057,7 @@ bool exact_cutset<G_t, config>::try_it(T_t &T, unsigned bagsize)
         boost::add_vertex(T);
     }
     unsigned bag_index=0;
-    std::vector<EXCUT_BOOL> visited(boost::num_vertices(_g));
+    std::vector<BOOL> visited(boost::num_vertices(_g));
     typedef typename boost::graph_traits<G_t>::vertex_iterator vit_G;
     typedef std::pair<vit_G, vit_G> VRP;
     typename ::detail::components_iter<G_t, VRP, EXCUT_BOOL>::scratch_type crscr;
@@ -1080,15 +1089,16 @@ bool exact_cutset<G_t, config>::try_it(T_t &T, unsigned bagsize)
             for( auto jj : parentB){
 //                trace1("", jj);
         //        target_bag.insert(jj);
-                auto pos=get_pos(jj, _g);
-                visited[pos]=true;
+                auto pos = get_pos(jj, _g);
+                visited[pos] = true;
             }
             // put connected component of leaf vertex into final bag
+            auto vm=util::make_incidence_mask(visited);
             auto N=make_components_range(source_bag.begin(), source_bag.end(),
-                    _g, &visited, &crscr, EXCUT_BOOL());
+                    _g, vm, &crscr);
 
-            auto C=*(N.first);
-            for(;C.first!=C.second; ++(C.first)){
+            auto C=*N.first;
+            for(; C.first!=C.second; ++C.first){
                 auto lbv=*C.first;
                 auto pos=get_pos(lbv, _g);
                 (void)pos;

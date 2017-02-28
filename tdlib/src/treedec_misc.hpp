@@ -50,12 +50,19 @@ private:
 template <typename T_t, class S_t, class G_t, class M_t>
 void append_decomposition(T_t &tgt, S_t const&& src, G_t const& /*GR*/, M_t const& map)
 {
+#ifdef DEBUG
+	for(auto& i: map){
+		std::cerr << "map " << i << "\n";
+	}
+#endif
+    assert(boost::num_vertices(tgt) == boost::num_edges(tgt)+1);
+    assert(boost::num_vertices(src) == boost::num_edges(src)+1);
     auto op=applyGmap<S_t, M_t>(src, map);
 //    assert(undirected_tree)...
     unsigned offset=boost::num_vertices(tgt);
     auto SR=boost::vertices(src);
     auto TR=boost::vertices(tgt);
-    trace3("append", SR.second-SR.first, TR.second-TR.first, map.size());
+    trace4("append", offset, SR.second-SR.first, TR.second-TR.first, map.size());
 
     if(SR.first==SR.second){ untested();
         // no bags to fetch. done
@@ -71,10 +78,20 @@ void append_decomposition(T_t &tgt, S_t const&& src, G_t const& /*GR*/, M_t cons
 
             assert(boost::degree(*SR.first, src)>0);
             assert(boost::out_degree(*SR.first, src)>0);
-            auto target_in_copy = *boost::adjacent_vertices(*SR.first, src).first;
-            if(target_in_copy<*SR.first){
-                add_edge(new_tv, target_in_copy+offset , tgt );
-            }
+            auto srcnp=boost::adjacent_vertices(*SR.first, src);
+				assert(srcnp.first!=srcnp.second);
+				for(;srcnp.first!=srcnp.second; ++srcnp.first){
+            auto target_in_copy = *srcnp.first;
+            assert(target_in_copy!=*SR.first);
+            if(target_in_copy<*SR.first){ untested();
+					trace2("copy edge", *SR.first, target_in_copy);
+					assert(!boost::edge(new_tv, target_in_copy+offset, tgt).second);
+					boost::add_edge(new_tv, target_in_copy+offset, tgt);
+            }else{ untested();
+					/// ???
+					trace1("no copy edge", *SR.first);
+				}
+				}
 
 #if 0 // vector version (how to select?)
             B = std::move(bag(*SR.first, src));
@@ -95,10 +112,15 @@ void append_decomposition(T_t &tgt, S_t const&& src, G_t const& /*GR*/, M_t cons
 
         if(offset){
             // connect new stuff to existing.
+				trace2("connecting existing ", new_tv, *boost::vertices(tgt).first);
+            assert(!boost::edge(new_tv, *boost::vertices(tgt).first, tgt).second);
             boost::add_edge(new_tv, *boost::vertices(tgt).first, tgt);
         }else{ untested();
         }
     }
+	 trace2("done", boost::num_vertices(src), boost::num_edges(src));
+	 trace2("done", boost::num_vertices(tgt), boost::num_edges(tgt));
+    assert(boost::num_vertices(tgt) == boost::num_edges(tgt)+1);
 }
 
 #ifdef NDEBUG

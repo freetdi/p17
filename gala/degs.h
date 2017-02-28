@@ -46,10 +46,7 @@ struct sgdeg_config {
 
 template<class G, class CFG=sgdeg_config<G> >
 class default_DEGS{
-    default_DEGS(const default_DEGS&){
-		 unreachable();
-		 // dont use. this is obsolete.
-	 }
+    default_DEGS(const default_DEGS&){}
 
 public: // types
     typedef typename G::vertex_type vertex_descriptor;
