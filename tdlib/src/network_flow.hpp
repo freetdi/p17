@@ -95,7 +95,7 @@ void check_dis(D dis, size_t num)
 }
 
 
-//Copies the induced subgraph of G formed by disabled into diG. The graph diG
+//Copy the induced subgraph of G formed by disabled into diG. The graph diG
 //is a digraph, that is for each edge of the induced subgraph we have an edge
 //and a reverse edge. diG has vertex and edge properties, in which the
 //iterativly computed edge set of the disjoint paths is stored. A new vertex in
@@ -238,6 +238,7 @@ static void make_paths(
     unsigned int i = 0;
     if(i<P.size()){
         P[i].clear();
+    }else{
     }
     for(boost::tie(nIt1, nEnd1) = boost::out_edges(source, diG); nIt1!=nEnd1; ++nIt1){
         if(boost::get(&Edge_NF::path, diG, *nIt1)){
@@ -251,13 +252,18 @@ static void make_paths(
                             i++;
                             if(i<P.size()){
                                 P[i].clear();
+                            }else{
                             }
                             goto NEXT_ITER;
                         }
                         break;
+                    }else{
                     }
                 }
             }
+            // unreachable
+        }else{
+            // edge source -> v (for some v) but no path....?
         }
         NEXT_ITER:
         ;
@@ -285,7 +291,7 @@ static bool t_search_disjoint_ways(
         G_t const &G)
 {
     boost::get(&Vertex_NF::visited, diG, v) = true;
-    bool on_a_path = (unsigned) boost::get(&Vertex_NF::predecessor, diG, v) != v;
+    bool on_a_path = boost::get(&Vertex_NF::predecessor, diG, v) != v;
 
     //The walk has reached the sink. We can extend the set of disjoint paths by another path.
     if(v == sink){
@@ -338,15 +344,13 @@ static bool t_search_disjoint_ways(
                 if(v==source || T==sink){
                     boost::get(&Edge_NF::path, diG, e) = true;
                     boost::get(&Vertex_NF::predecessor, diG, T) = v;
-                }
-                else{
+                }else{
                     assert(boost::edge(T, v, diG).second);
                     bool rpath = boost::get(&Edge_NF::path, diG, redge);
                     if(rpath){
                         boost::get(&Edge_NF::path, diG, redge) = false;
                         pre = v;
-                    }
-                    else{
+                    }else{
                         boost::get(&Edge_NF::path, diG, e) = true;
                         boost::get(&Vertex_NF::predecessor, diG, T) = v;
                     }
@@ -426,12 +430,14 @@ bool disjoint_ways(G_t const &G, std::vector<bool> const &disabled,
             if(boost::get(&Vertex_NF::visited, diG, *Pij)){
                 S.insert(idxMap[*Pij]);
                 goto THERE;
+            }else{
             }
         }
         if(Pij==Pi->rend()){
             S.insert(idxMap[*Pi->begin()]);
+        }else{
         }
-    THERE:
+THERE:
         ;
     }
 

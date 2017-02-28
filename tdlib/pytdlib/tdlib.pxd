@@ -8,6 +8,8 @@ cdef extern from "python_tdlib.hpp":
 
     int gc_preprocessing(vector[unsigned int] &V_G, vector[unsigned int] &E_G,
                          vector[vector[int]] &bags, int lb, unsigned graphtype)
+    int gc_PP(vector[unsigned int] &V_G, vector[unsigned int] &E_G,
+                 vector[vector[int]] &V_T, vector[unsigned int] &E_T, int lb, unsigned graphtype)
     int gc_PP_MD(vector[unsigned int] &V_G, vector[unsigned int] &E_G,
                  vector[vector[int]] &V_T, vector[unsigned int] &E_T, int lb, unsigned graphtype)
     int gc_PP_FI(vector[unsigned int] &V_G, vector[unsigned int] &E_G,

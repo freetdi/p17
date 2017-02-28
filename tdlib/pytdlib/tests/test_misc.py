@@ -9,6 +9,27 @@ from graphs import *
 sys.argv=sys.argv[:1]
 
 class TestTdLib_misc(unittest.TestCase):
+
+    def test_is_valid(self):
+        # BUG: how to create treedec from lists?
+        # abusing Graph, for now.
+        V = [0,1]
+        E = [[0,1]]
+        G = Graph(V, E)
+        T, w = tdlib.ordering_to_treedec(G, V)
+        r = tdlib.check_treedec(G, Graph([], []), True)
+        self.assertEqual(r, -5)
+        r = tdlib.is_valid_treedecomposition(G, Graph([], []), True)
+        self.assertEqual(r, False)
+        r = tdlib.check_treedec(G, Graph([[1]], []), True)
+        self.assertEqual(r, -2) # missing vertex
+        r = tdlib.check_treedec(G, Graph([[1],[0]], []), True)
+        self.assertEqual(r, -1) # not a tree
+        r = tdlib.check_treedec(G, Graph([[1],[0]], [[1,0]]), True)
+        self.assertEqual(r, -3) # edgecover broken
+        r = tdlib.check_treedec(G, Graph([[1],[0],[0,1]], [[1,2],[1,0]]), True)
+        self.assertEqual(r, -4) # connectivity violation
+
     def test_conversion_0(self):
         for V, E in cornercases:
             G = Graph(V, E)
@@ -71,7 +92,7 @@ class TestTdLib_misc(unittest.TestCase):
             V, E = randomGNP(20, 0.2)
             G = Graph(V, E)
             T, w = tdlib.PP_MD(G)
-            self.assertTrue(tdlib.is_valid_treedecomposition(G, T))
+            self.assertEqual(tdlib.is_valid_treedecomposition(G, T), True)
             O = tdlib.treedec_to_ordering(T)
             T, w = tdlib.ordering_to_treedec(G, O)
             self.assertEqual(tdlib.is_valid_treedecomposition(G, T), True)

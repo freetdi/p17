@@ -1,5 +1,19 @@
 #include <iostream>
 
+#ifndef HP_hp
+#define HP_hp
+class hp{
+	intptr_t p;
+	public:
+	hp(const void* x){
+		p = (intptr_t)x %30011;
+	}
+	operator int(){
+		return static_cast<int>(p);
+	}
+};
+#endif
+
 #ifndef incomplete
 #define incomplete() \
 	std::cout << "incomplete " << __FILE__ << ":" << __LINE__ << ":" << __func__ << "\n"
@@ -28,7 +42,10 @@
 #else
 #define untested()
 #endif
+
+#ifndef USE
 #define USE(x) (1)?(void)(0):(void)(x)
+#endif
 
 #undef trace0
 #undef trace1
@@ -78,10 +95,18 @@
 # ifndef NDEBUG
 template <class C>
 inline bool contains(C const& c, typename C::value_type const& v)
-{ untested();
-	return(c.find(v) != c.end());
+{
+//	return(c.find(v) != c.end());
+   for(auto i : c){
+		if(i == v){
+			return true;
+		}else{
+		}
+	}
+	return false;
 }
-template <class X>
+#if 0 // does not work
+template <>
 inline bool contains(std::vector<X> const& c, X const& v)
 {
 	typedef typename std::vector<X>::const_iterator it;
@@ -91,5 +116,6 @@ inline bool contains(std::vector<X> const& c, X const& v)
 	}
 	return false;
 }
+#endif
 # endif
 #endif

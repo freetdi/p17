@@ -1,0 +1,33 @@
+language: cpp
+sudo: required
+dist: trusty
+
+os:
+  - linux
+
+compiler:
+  - gcc
+  - clang
+
+virtualenv:
+  system_site_packages: true
+
+env:
+  global:
+    - secure: "token"
+
+addons:
+  apt:
+    packages:
+      - libboost-dev
+      - stx-btree-dev
+
+script:
+  - uname -a
+  - $CXX --version
+  - pwd
+  - ls
+
+  # run all checks
+  - ./configure
+  -  make check

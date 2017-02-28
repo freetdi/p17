@@ -33,7 +33,7 @@ int main()
 	typename treedec::graph_traits<G>::treedec_type t;
 
 	treedec::draft::vec_ordering_to_tree(g, o, t, &io);
-	assert(!treedec::check_treedec(g, t));
+	assert(treedec::is_valid_treedec(g, t));
 
 	std::cerr << "has bagsize " << treedec::get_width(t) << "\n";
 

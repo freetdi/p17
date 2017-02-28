@@ -28,14 +28,14 @@
 #include <map>
 
 #include <boost/graph/adjacency_list.hpp>
-#include "graph.hpp"
-#include "preprocessing.hpp"
+#include "graph_traits.hpp"
 #include "combinations.hpp"
 #include "lower_bounds.hpp"
 #include "elimination_orderings.hpp"
 #include "nice_decomposition.hpp"
 #include "applications.hpp"
 #include "misc.hpp"
+#include "preprocessing.hpp"
 
 
 typedef boost::adjacency_list<boost::setS, boost::vecS, boost::undirectedS> TD_graph_t;
@@ -196,6 +196,31 @@ int gc_preprocessing(std::vector<unsigned int> &V_G,
     return lb;
 }
 
+
+int gc_PP(std::vector<unsigned int> &V_G, std::vector<unsigned int> &E_G,
+             std::vector<std::vector<int> > &, std::vector<unsigned int> &, int, unsigned graphtype)
+{
+    TD_tree_dec_t T;
+
+    if(graphtype == 1 || graphtype == 0){
+        TD_graph_t G;
+        // TD_graph_vec_t G; BUG. PP does not like double edges.
+        make_tdlib_graph(G, V_G, E_G);
+
+        // treedec::PP(G, T, lb);
+#if 0
+        treedec::impl::preprocessing<TD_graph_t> A(G);
+        A.set_treewidth(std::make_pair(0,-1u));
+        A.do_it();
+        return A.get_bagsize();
+#endif
+        return 0;
+    }else{
+        assert(false);
+        return -66;
+    }
+
+}
 
 int gc_PP_MD(std::vector<unsigned int> &V_G, std::vector<unsigned int> &E_G,
              std::vector<std::vector<int> > &V_T, std::vector<unsigned int> &E_T, int lb, unsigned graphtype)
@@ -606,10 +631,7 @@ int gc_boost_minDegree_decomp(std::vector<unsigned int> &V_G, std::vector<unsign
 #endif
     treedec::get_bagsize(T);
 
-#ifndef NDEBUG
-    // assert(w1 == w2); // why not?
-    (void)w1; (void)w2;
-#endif
+    assert(w1 == w2);
 
     treedec::make_small(T);
 

@@ -19,7 +19,7 @@ typename boost::graph_traits<G_t>::vertices_size_type
     return minDegree_decomp(G, (typename treedec_chooser<G_t>::type*)NULL);
 }
 
-
+#if 0
 template <typename G_t, typename T_t>
 typename boost::graph_traits<G_t>::vertices_size_type
   fillIn_decomp(G_t &G, T_t &T,
@@ -30,6 +30,7 @@ typename boost::graph_traits<G_t>::vertices_size_type
        (typename std::vector<typename treedec_chooser<G_t>::value_type>*)NULL,
        ub, ignore_isolated_vertices);
 }
+#endif
 
 template <typename G_t>
 typename boost::graph_traits<G_t>::vertices_size_type

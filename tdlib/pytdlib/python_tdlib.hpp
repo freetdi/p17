@@ -6,6 +6,9 @@
 int gc_preprocessing(std::vector<unsigned int> &V_G, std::vector<unsigned int> &E_G,
                      std::vector<std::vector<int> > &bags, int lb, unsigned graphtype);
 
+int gc_PP(std::vector<unsigned int> &V_G, std::vector<unsigned int> &E_G,
+             std::vector<std::vector<int> > &V_T, std::vector<unsigned int> &E_T, int lb, unsigned graphtype);
+
 int gc_PP_MD(std::vector<unsigned int> &V_G, std::vector<unsigned int> &E_G,
              std::vector<std::vector<int> > &V_T, std::vector<unsigned int> &E_T, int lb, unsigned graphtype);
 
@@ -54,7 +57,6 @@ int gc_minDegree_decomp(std::vector<unsigned int> &V, std::vector<unsigned int> 
 
 int gc_boost_minDegree_decomp(std::vector<unsigned int> &V, std::vector<unsigned int> &E,
                          std::vector<std::vector<int> > &V_T, std::vector<unsigned int> &E_T, unsigned graphtype);
-
 
 int gc_fillIn_decomp(std::vector<unsigned int> &V, std::vector<unsigned int> &E,
                       std::vector<std::vector<int> > &V_T, std::vector<unsigned int> &E_T, unsigned graphtype);

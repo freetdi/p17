@@ -1,6 +1,13 @@
+- switch to proper buckets in FILL and DEGS
+- make GALA optional in grtd
+- fix make_tdlib_graph prototype, or name
+- proper boundaries (instead of UINT_MAX etc.)
+- preprocessing is inefficient. should use/know tree
 - cleanup interfaces
 - release 1.0
 - provide meta heuristic for treewidth
-- parallelize exact_cutset?
 - solvers as (callable/extensible) classes
 - more treedecomposition structures
+
+- sowas wie set/reset overlay
+- use skeletal stuff in PP->treedec

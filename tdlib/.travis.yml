@@ -20,10 +20,9 @@ env:
 
 addons:
   apt:
-    sources:
-      - trusty
     packages:
       - libboost-dev
+      - stx-btree-dev
 
 install:
   - sudo pip install cython

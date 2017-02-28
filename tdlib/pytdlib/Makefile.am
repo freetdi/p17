@@ -9,6 +9,8 @@ tdlib_la_SOURCES = tdlib.pyx python_tdlib.cpp
 
 PACKAGE_STRING+= python interface
 
+AM_TESTS_FD_REDIRECT=9>&2
+
 CLEANFILES += tdlib.cpp
 
 AM_CXXFLAGS = -pthread -Wl,-O1 -Wl,-Bsymbolic-functions \

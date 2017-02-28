@@ -304,6 +304,48 @@ def preprocessing(G):
     return Graph(V_G_, E_G), c_bags_, py_lb
 
 
+def PP(G):
+    """
+    Returns a tree decomposition of exact width, iff the treewidth of
+    the given graph G is not greater than 3, otherwise the reduced
+    instance G' of G will be processed by the minDegree heuristic, which
+    successivly eliminates a vertex of minimal degree. The returned tree
+    decomposition then may be of non-optimal width.
+
+    INPUTS:
+
+    - G : input graph (must provide the methods vertices() and edges())
+
+    OUTPUTS:
+
+    - T : treedecomposition
+
+    - width : the width of T
+
+    EXAMPLES:
+
+        G = Graph([1,2,3], [[1,2],[2,3]])
+        T, width = tdlib.PP(G)
+    """
+
+    cdef vector[unsigned int] V_G, E_G, E_T
+    cdef vector[vector[int]] V_T
+
+    labels_map = cython_make_tdlib_graph(G.vertices(), G.edges(), V_G, E_G)
+
+    cdef int c_lb = -1
+
+    cdef unsigned graphtype = graphtype_to_uint(G.graphtype())
+
+    c_lb = gc_PP(V_G, E_G, V_T, E_T, c_lb, graphtype)
+
+    V_T_ = apply_labeling(V_T, labels_map)
+
+    T = Decomp(V_T_, E_T)
+
+    return T, c_lb
+
+
 def PP_MD(G):
     """
     Returns a tree decomposition of exact width, iff the treewidth of
@@ -1305,7 +1347,7 @@ def trivial_decomposition(G):
     return T, get_width(T)
 
 
-def is_valid_treedecomposition(G, T, message=True):
+def check_treedec(G, T, message=True):
     """
     Checks, if the definition of a tree decomposition holds for
     a tree decomposition and a graph.
@@ -1362,8 +1404,14 @@ def is_valid_treedecomposition(G, T, message=True):
         else:
             pass
 
-    return py_status == 0
+    return py_status
 
+def is_valid_treedecomposition(G, T, message=True):
+    """
+    True, the definition of a tree decomposition holds for
+    a tree decomposition and a graph.
+	 """
+    return 0==check_treedec(G, T, message)
 
 def get_width(T):
     """

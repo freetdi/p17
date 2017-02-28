@@ -20,6 +20,9 @@ int main(){
 	V[2]=1;
 	B.push(2);
 
+	V[3]=1;
+	B.push(3);
+
 	V[0]=1;
 	B.update(0); // kills 2
 
@@ -28,6 +31,6 @@ int main(){
 		++c;
 		std::cout<< i<< "\n";
 	}
-	assert(c==2);
+	assert(c==3);
 
 }

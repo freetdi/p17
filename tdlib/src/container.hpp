@@ -23,10 +23,6 @@
 // #include "config.h" // not yet
 #include "container_traits.hpp"
 
-#ifdef HAVE_STX_BTREE_SET_H
-#include <stx/btree_set>
-#endif
-
 namespace treedec{
 
 template<class C>
@@ -74,6 +70,13 @@ void push(C& c, E e)
     // assert (size==n+1)
 }
 
+// push a range. otherwise like push
+template<class C, class B, class E>
+void push(C& c, B b, E e)
+{
+    detail::container_modify<C>::push(c, b, e);
+}
+
 // must not create duplicates
 // i.e. implicitly, if it's not enforced by the container
 template<class C, class E>
@@ -81,6 +84,12 @@ void insert(C& c, E e)
 {
     // assert(!contains...)
     detail::container_modify<C>::insert(c, e);
+}
+
+template<class C, class E>
+bool contains(C const& c, E e)
+{ itested();
+    return detail::container_inspect<C>::contains(c, e);
 }
 
 } // treedec

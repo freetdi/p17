@@ -66,6 +66,7 @@
 #include "preprocessing.hpp"
 #include "simple_graph_algos.hpp"
 #include "misc.hpp"
+#include "printer.hpp" // BUG?!
 
 #ifndef MINIMUM_DEGREE_ORDERING_HPP
 # include "minimum_degree_ordering.hpp"
@@ -242,7 +243,7 @@ int boost_minDegree_ordering(G_t &G, O_t &O, O_t &iO, unsigned ub = UINT_MAX)
 
 template <typename G_t, typename O_t>
 int boost_minDegree_ordering(G_t &G, O_t &O, unsigned ub=UINT_MAX)
-{
+{ untested();
     O_t iO(boost::num_vertices(G), 0);
     return boost_minDegree_ordering(G, O, iO, ub);
 }
@@ -572,7 +573,7 @@ void vec_ordering_to_tree(G_t const &G, O_t &O, T& t, O_t* io=NULL,
 
     for(unsigned i = 0; i < num_vert; i++){ itested();
         boost::add_vertex(t);
-        auto& b=bag(i,t);
+        auto& b=bag(i, t);
         push(b, O[i]);
         for(unsigned j = 0; j < num_vert; j++){ itested();
             if(boost::edge(i, j, bags).second){ itested();

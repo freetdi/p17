@@ -48,10 +48,11 @@
 #include <boost/graph/connected_components.hpp>
 
 #include "container.hpp"
-#include "graph.hpp"
+#include "graph_traits.hpp"
 #include "simple_graph_algos.hpp"
 #include "platform.hpp"
 #include "trace.hpp"
+#include "treedec_traits.hpp"
 
 #ifndef NDEBUG
 #include <iostream>
@@ -83,7 +84,6 @@ typename boost::graph_traits<T_t>::vertex_descriptor find_root(T_t &T){
 }
 
 // TODO: deduplicate (see sethack.h)
-// be careful: will fail on unordered sets without warning.
 template<class S, class T>
 inline bool set_intersect(const S& s, const T& t)
 {
@@ -95,14 +95,21 @@ inline bool set_intersect(const S& s, const T& t)
             return true;
         }
         else if(*it1 < *it2){
+            auto previous=*it1;
             it1++;
+            assert(it1==s.end() || previous<*it1);
+            (void)previous;
         }
         else{
+            auto previous=*it2;
             it2++;
+            assert(it2==t.end() || previous<*it2);
+            (void)previous;
         }
     }
     return false;
 }
+
 
 template <typename T_t>
 void postorder_traversal(T_t &T, std::stack<typename boost::graph_traits<T_t>::vertex_descriptor> &S)
@@ -181,11 +188,35 @@ bool validate_connectivity(T_t &T){
     }
 }
 
+namespace HACK{
+// hmm, inefficient. should sort first
+// but then, need mutable bags :/
+// (e.g. in check_treedec below)
+template <class X>
+inline bool contains(std::vector<X> const& c, X const& v)
+{
+	typedef typename std::vector<X>::const_iterator it;
+
+	for(it i=c.begin(); i!=c.end(); ++i){
+		if(v == *i) return true;
+	}
+	return false;
+}
+template <class C>
+inline bool contains(C const& c, typename C::value_type const& v)
+{
+	return(c.find(v) != c.end());
+}
+} // HACK
+
+
+}
+namespace treedec{
+
 template <typename G_t>
 bool is_tree(G_t const& G){
     //This is a root if G is a tree.
     typename boost::graph_traits<G_t>::vertex_descriptor root = find_root(G);
-
     //This will not be exhaustive if 'root' is not a root.
     std::vector<bool> visited(boost::num_vertices(G), false);
     std::vector<std::set<typename boost::graph_traits<G_t>::vertex_descriptor> > components;
@@ -205,47 +236,51 @@ bool is_tree(G_t const& G){
  * -3 = (at least) not all edges covered (but a tree and all vertices covered)
  * -4 = there exist vertices, coded in the bags of T, that are not connected in T
  *                           (but T is a tree and all edges/vertices are covered)
- * -5 = The empty graph must have a treedecomposition with one vertex and an empty bag
+ * -5 = There's no vertex in T. (Also required if G is empty, by convention.)
  */
+
 template <typename G_t, typename T_t>
 int check_treedec(G_t const& G, T_t const& T)
-{
-    if(boost::num_vertices(T) == 0){
+{ untested();
+    if(boost::num_vertices(T) == 0){ untested();
         //The empty graph has a treedecomposition with 1 vertex and an empty bag.
         return -5;
+    }else{ untested();
     }
 
-    if(!is_tree(T)){
+    if(!is_tree(T)){ untested();
 #ifndef NDEBUG
         std::cerr << "[is_valid_treedecomposition]: treedecomposition is not a tree" << std::endl;
 #endif
         return -1;
+    }else{ untested();
     }
 
     //Checks if exactly the vertices of G are covered.
-    typename treedec_traits<T_t>::bag_type coded_vertices;
+    std::set<typename treedec_traits<T_t>::bag_type::value_type> coded_vertices;
     typename boost::graph_traits<T_t>::vertex_iterator tIt, tEnd;
-    for(boost::tie(tIt, tEnd) = boost::vertices(T); tIt != tEnd; tIt++){
+    for(boost::tie(tIt, tEnd) = boost::vertices(T); tIt != tEnd; tIt++){ untested();
         coded_vertices.insert(bag(*tIt, T).begin(),
                               bag(*tIt, T).end());
     }
 
-    typename treedec_traits<T_t>::bag_type vertices;
+    std::set<typename treedec_traits<T_t>::bag_type::value_type> vertices;
     typename boost::graph_traits<G_t>::vertex_iterator vIt, vEnd;
-    for(boost::tie(vIt, vEnd) = boost::vertices(G); vIt != vEnd; vIt++){
+    for(boost::tie(vIt, vEnd) = boost::vertices(G); vIt != vEnd; vIt++){ untested();
         typename treedec_traits<T_t>::bag_type::value_type v;
         v = *vIt;
         insert(vertices, v);
     }
 
-    if(coded_vertices != vertices){
+    if(coded_vertices == vertices){ untested();
+    }else{ untested();
 #ifndef NDEBUG
         std::cerr << "[is_valid_treedecomposition]: invalid vertices or not all vertices coded: " << std::endl;
         typename treedec_traits<T_t>::bag_type sym_diff;
         std::set_symmetric_difference(coded_vertices.begin(), coded_vertices.end(),
                                       vertices.begin(), vertices.end(),
                                       std::inserter(sym_diff, sym_diff.begin()));
-        for(typename treedec_traits<T_t>::bag_type::iterator sIt=sym_diff.begin(); sIt != sym_diff.end(); sIt++){
+        for(typename treedec_traits<T_t>::bag_type::iterator sIt=sym_diff.begin(); sIt != sym_diff.end(); sIt++){ untested();
             std::cerr << *sIt << " ";
         } std::cerr << std::endl;
 #endif
@@ -253,29 +288,31 @@ int check_treedec(G_t const& G, T_t const& T)
         return -2;
     }
 
-    //Checks if all edges are covered.
+    //Check if all edges are covered.
     typename std::vector<typename treedec_traits<T_t>::bag_type> edges(boost::num_edges(G));
-    for(boost::tie(vIt, vEnd) = boost::vertices(G); vIt != vEnd; vIt++){
+    for(boost::tie(vIt, vEnd) = boost::vertices(G); vIt != vEnd; vIt++){ untested();
         typename boost::graph_traits<G_t>::adjacency_iterator nIt, nEnd;
-        for(boost::tie(nIt, nEnd) = boost::adjacent_vertices(*vIt, G); nIt != nEnd; nIt++){
-            if(*vIt >= *nIt){
+        for(boost::tie(nIt, nEnd) = boost::adjacent_vertices(*vIt, G); nIt != nEnd; nIt++){ untested();
+            if(*vIt >= *nIt){ untested();
                 continue;
             }
 
             bool is_contained = false;
-            for(boost::tie(tIt, tEnd) = boost::vertices(T); tIt != tEnd; tIt++){
+            for(boost::tie(tIt, tEnd) = boost::vertices(T); tIt != tEnd; tIt++){ untested();
                 typedef typename treedec_traits<T_t>::bag_type::value_type vd_type;
                 vd_type v(*vIt);
                 vd_type n(*nIt);
 
-                if(bag(*tIt, T).find(v) != bag(*tIt, T).end() &&
-                   bag(*tIt, T).find(n) != bag(*tIt, T).end()){
+                if(HACK::contains(bag(*tIt, T), v) &&
+                   HACK::contains(bag(*tIt, T), n)){ untested();
                     is_contained = true;
                     break;
                 }
             }
 
-            if(!is_contained){
+            if(is_contained){ untested();
+                // TODO: need tests, really!
+            }else{ untested();
 #ifndef NDEBUG
                 std::cerr << "[is_valid_treedecomposition]: not all edges covered: " << std::endl;
                 std::cerr << "    " << *vIt << "--" << *nIt << std::endl;
@@ -285,16 +322,24 @@ int check_treedec(G_t const& G, T_t const& T)
         }
     }
 
-    if(!validate_connectivity(T)){
+    if(!validate_connectivity(T)){ untested();
         return -4;
+    }else{ untested();
     }
 
     return 0;
 }
 
+/* Checks if a tree decomposition is valid with respect to G. */
+template <typename G_t, typename T_t>
+bool is_valid_treedec(G_t const& G, T_t const& T)
+{ untested();
+    return !validate_treedecomposition(G, T);
+}
+
 template <typename G_t, typename T_t>
 int validate_treedecomposition(G_t const& G, T_t const& T)
-{
+{ untested();
     return check_treedec(G, T);
 }
 
@@ -313,6 +358,7 @@ void trivial_decomposition(G_t const &G, T_t &T){
         insert(bag(t, T), v);
     }
 }
+
 
 template <typename T_t>
 inline size_t get_bagsize(T_t const &T){
@@ -396,7 +442,7 @@ void make_small(T_t &T){
 
 //Glues two "disjoint" decompositions (e.g. decompositions of two components of a graph)
 template <typename T_t>
-void glue_decompositions(T_t &T1, T_t &T2){
+void glue_decompositions(T_t &T1, T_t const&T2){
     typename boost::graph_traits<T_t>::vertex_iterator tIt, tEnd;
 
     //Copy T2 to T1 and add an edge from root to an arbitrary vertex of T2.
@@ -428,7 +474,7 @@ void glue_decompositions(T_t &T1, T_t &T2){
 
 template <typename T_t>
 void make_thick(T_t &T){
-    unsigned int maxsize = (unsigned int) treedec::get_width(T)+1;
+    unsigned int maxsize = (unsigned int) get_bagsize(T);
     bool modified = true;
 
     //Fill bags such that they all have size 'maxsize'.
@@ -556,7 +602,7 @@ void make_binary(T_t &T, typename boost::graph_traits<T_t>::vertex_descriptor t,
             bag(d, T) = bag(t, T);
             boost::add_edge(t, d, T);
 
-            detail::make_binary(T, t, visited);
+            make_binary(T, t, visited);
             return;
     }
 
@@ -565,7 +611,7 @@ void make_binary(T_t &T, typename boost::graph_traits<T_t>::vertex_descriptor t,
     while(visited[*c]){ c++; }
     c1 = *c;
 
-    detail::make_binary(T, c0, visited);
+    make_binary(T, c0, visited);
 
     if(bag(t, T) != bag(c0, T)){
         typename boost::graph_traits<T_t>::vertex_descriptor d = boost::add_vertex(T);
@@ -575,7 +621,7 @@ void make_binary(T_t &T, typename boost::graph_traits<T_t>::vertex_descriptor t,
         bag(d, T) = bag(t, T);
     }
 
-    detail::make_binary(T, c1, visited);
+    make_binary(T, c1, visited);
 
     if(bag(t, T) != bag(c1, T)){
         typename boost::graph_traits<T_t>::vertex_descriptor d = boost::add_vertex(T);
@@ -638,12 +684,19 @@ void make_rooted(T_undir_t &T, T_dir_t &T_)
 
 //Glues a single bag with the current tree decomposition T according to subset relation.
 //Version used for preprocessing.
+//
+// elim_vertex is not an element of b
+//
+// BUG: this is inefficient. there's already a better implementation
+// (where?)
 template<typename T_t>
 void glue_bag(
         typename treedec_traits<T_t>::bag_type &b,
         typename treedec_traits<T_t>::vd_type elim_vertex,
         T_t &T)
 {
+    // BOOST_STATIC_ASSERT(something_is_a_set);
+    typedef typename boost::graph_traits<T_t>::vertex_descriptor t_vertex_descriptor;
     typename boost::graph_traits<T_t>::vertex_iterator vIt, vEnd;
 
     for(boost::tie(vIt, vEnd) = boost::vertices(T); vIt != vEnd; vIt++){
@@ -651,21 +704,23 @@ void glue_bag(
                          bag(*vIt, T).end(),
                          b.begin(), b.end()))
         {
-            if(bag(*vIt, T).find(elim_vertex) != bag(*vIt, T).end()){
-                return;
-            }
-            b.insert(elim_vertex);
-            typename boost::graph_traits<T_t>::vertex_descriptor t_dec_node = boost::add_vertex(T);
-            bag(t_dec_node, T) = MOVE(b);
+            // BUG, inefficient for vectors.
+            if(!contains(bag(*vIt, T), elim_vertex)){ untested();
+                push(b, elim_vertex);
+                t_vertex_descriptor t_dec_node=boost::add_vertex(T);
+                bag(t_dec_node, T) = MOVE(b);
 
-            boost::add_edge(*vIt, t_dec_node, T);
+                boost::add_edge(*vIt, t_dec_node, T);
+            }else{ untested();
+            }
             return;
+        }else{ itested();
         }
     }
 
     //Case for a disconnected graph.
-    typename boost::graph_traits<T_t>::vertex_descriptor t_dec_node = boost::add_vertex(T);
-    b.insert(elim_vertex);
+    t_vertex_descriptor t_dec_node = boost::add_vertex(T);
+    push(b, elim_vertex);
     bag(t_dec_node, T) = MOVE(b);
 
     if(boost::num_vertices(T) > 1){
@@ -714,11 +769,10 @@ void glue_two_bags(T_t &T,
 }
 
 //Glues bags with the current tree decomposition.
-template<typename T_t>
-void glue_bags(std::vector< boost::tuple<
-        typename treedec_traits<T_t>::vd_type,
-        typename treedec_traits<T_t>::bag_type
-             > > &bags, T_t &T)
+// destroys bags
+// BUG: what is V_t?
+template<typename V_t, typename T_t>
+void glue_bags(V_t& bags, T_t &T)
 {
     for(unsigned int i = bags.size(); i > 0; i--){
         typename treedec_traits<T_t>::vd_type first = boost::get<0>(bags[i-1]);
@@ -735,6 +789,7 @@ void glue_bags(std::vector< boost::tuple<
 
 namespace detail{
 
+// S_ = "vdmap[S]"
 // first argument: set of vertices in H.
 // second argument: set of vdMap values...
 template <typename G_t, typename VDSET, typename M_t>
@@ -747,10 +802,8 @@ void map_descriptors(std::set<typename boost::graph_traits<G_t>::vertex_descript
     }
 }
 
-template <typename G_t>
-void map_descriptors_to_bags(
-        std::set<typename boost::graph_traits<G_t>::vertex_descriptor> const &S,
-        typename treedec_traits<typename treedec_chooser<G_t>::type>::bag_type &B)
+template <typename G_t, typename S_t, typename B_t>
+void map_descriptors_to_bags(S_t const &S, B_t &B)
 {
     for(typename std::set<typename boost::graph_traits<G_t>::vertex_descriptor>::iterator sIt =
                   S.begin(); sIt != S.end(); sIt++)
@@ -766,14 +819,18 @@ void map_descriptors_to_bags(
 using detail::map_descriptors;
 using detail::map_descriptors_to_bags;
 
-template <typename G_t, typename T_t>
-void apply_map_on_treedec(T_t &T, G_t &G, typename std::vector<typename boost::graph_traits<G_t>::vertex_descriptor> &vdMap){
+static std::set<unsigned> emptyset___;
+
+template <typename G_t, typename T_t, typename M_t>
+void apply_map_on_treedec(T_t &T, G_t &G, M_t &vdMap,
+        std::set<unsigned> = emptyset___)
+{
     typename boost::graph_traits<T_t>::vertex_iterator tIt, tEnd;
     for(boost::tie(tIt, tEnd) = boost::vertices(T); tIt != tEnd; tIt++){
         typename treedec_traits<T_t>::bag_type bag_old, bag_new;
         bag_old = bag(*tIt, T);
-        for(typename treedec_traits<T_t>::bag_type::iterator sIt = bag_old.begin(); sIt != bag_old.end(); sIt++){
-            unsigned int pos = get_pos(*sIt, G);
+        for(auto x : bag_old) {
+            unsigned int pos = get_pos(x, G);
             bag_new.insert(vdMap[pos]);
         }
         bag(*tIt, T) = MOVE(bag_new);
@@ -825,6 +882,29 @@ void subsets(S const &X, int size, int k, int idx,
 {
     assert(!sub.size());
     return subsets(X, size, k, idx, subs, &sub);
+}
+
+//TODO: not here.
+template<class G, class B>
+inline void detach_neighborhood(
+        typename boost::graph_traits<G>::vertex_descriptor& c,
+        G& g, B& bag)
+{
+    assert(boost::is_undirected(g));
+
+    typename boost::graph_traits<G>::adjacency_iterator nIt1, nIt2, nEnd;
+    // inefficient.
+
+    if(boost::is_directed(g)){
+//        hack, do it differnetly.
+        unreachable();
+    }else{
+        for(boost::tie(nIt1, nEnd) = boost::adjacent_vertices(c, g); nIt1 != nEnd; nIt1++)
+        {
+            bag.insert(get_vd(g, *nIt1));
+        }
+        boost::clear_vertex(c, g);
+    }
 }
 
 } // namespace treedec

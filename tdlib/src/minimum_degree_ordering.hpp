@@ -374,6 +374,8 @@ namespace boost {
         while (!numbering.all_done()) {
           typename Workspace::stack llist = work_space.make_stack();
 
+          {
+
             // Find the next non-empty degree
             for (list_min_degree = degreelists[min_degree]; 
                  list_min_degree.empty() && min_degree < n;
@@ -421,6 +423,7 @@ namespace boost {
 
             numbering.increment(supernode_size[node]);
             llist.push(node_id);
+          } // multiple elimination
 
           if (numbering.all_done()) 
             break;

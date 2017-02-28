@@ -1,0 +1,7 @@
+gala is a C++ graph implementation inspired by boost/BGL.
+
+some parts of the code and some decisions are under construction. the example
+graphs, used as boost graphs, are meant to be safe.
+
+the treedec graph interface is following tdlib and might be subject to future
+changes.

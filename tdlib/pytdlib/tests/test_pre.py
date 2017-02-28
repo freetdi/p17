@@ -74,8 +74,13 @@ class TestTdLib_pre(unittest.TestCase):
         G_, B, lb = tdlib.preprocessing(G)
         self.assertEqual(lb, 3)
 
-    def test_preprocessing_8(self):
+    def test_GsF(self):
         G = Graph(V_GsF__dn_, E_GsF__dn_)
+        G_, B, lb = tdlib.preprocessing(G)
+        self.assertEqual(lb, 3)
+
+    def Cube(self):
+        G = Graph(V_Cube, E_Cube)
         G_, B, lb = tdlib.preprocessing(G)
         self.assertEqual(lb, 3)
 

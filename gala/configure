@@ -1,0 +1,15 @@
+#!/bin/sh
+
+prefix=/usr/local
+
+if test "x$1" != "x"; then
+	if test "x${1#--prefix=}" != "x$1"; then
+		prefix=${1#--prefix=}
+	else
+		:
+	fi
+else
+	:
+fi
+
+echo prefix="$prefix" > Makefile.settings

@@ -1,0 +1,10 @@
+- all types should end with _type
+- assigning undirected graph to directed creates symmetric graph
+	this is an old HACK...
+
+  to get a symmetric directed graph from an undirected, you should do
+  undirected_graph_t U(...);
+  directed_graph_t D;
+  D = U.directed_view(); // <= will assign both directions, naturally
+  (this is untested)
+- some assignments are inefficient, preallocation is incomplete

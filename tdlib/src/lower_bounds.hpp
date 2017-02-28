@@ -84,6 +84,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <utility>
 
+#include "algo.hpp"
 #include "degree.hpp"
 #include "graph.hpp"
 #include "misc.hpp"
@@ -800,8 +801,12 @@ struct degree_decrease
             // a degree one node does not change its degree during collapse
             assert(false);
         }else{
+#if 1
+            _degs->q_update(v);
+#else
             _degs->unlink(v);
             _degs->reg(v, degree-1);
+#endif
         }
     }
 private:
@@ -815,19 +820,24 @@ template <typename G_t>
 class deltaC_least_c : public treedec::algo::draft::algo1{
 public:
     typedef typename boost::graph_traits<G_t>::vertex_descriptor vertex_descriptor;
-    typedef typename deg_chooser<G_t>::type degs_type;
+    // pick from CFG? from graph?
+    // typedef typename treedec::graph_traits<G_t>::degs_type degs_type;
+    typedef treedec::DEGS<G_t> degs_type;
 
     deltaC_least_c(G_t &G) : algo1("lb::deltaC_least_c"), _g(G), _lb(0){}
 
-    void do_it(){
+    void do_it(){ untested();
         timer_on();
+
+        assert(!boost::is_directed(_g));
 
         degs_type degs(_g);
         degree_decrease<G_t> cb(&degs, &_g);
 
         unsigned int min_ntd = 2;
 
-        while(boost::num_edges(_g) > 0){
+        trace1("dclc loop", boost::num_vertices(_g));
+        while(boost::num_edges(_g) > 0){ untested();
             //Search a minimum-degree-vertex.
             if(min_ntd>1){
                 --min_ntd;
@@ -836,7 +846,8 @@ public:
             std::pair<vertex_descriptor, unsigned> min_pair;
             min_pair = degs.pick_min(min_ntd);
             min_ntd = min_pair.second;
-            trace2("dclc", min_pair.first, min_ntd);
+            assert(min_ntd == boost::degree(min_pair.first, _g));
+            trace2("dclc loop", min_pair.first, min_pair.second);
 
             if(_lb < min_ntd){
                 _lb = min_ntd;
@@ -854,45 +865,52 @@ public:
 
             //Contract the edge between min_vertex into w.
             //Clear min_vertex and rearrange degs through callback.
+            trace2("dclc contracting", min_vertex, w);
+
             contract_edge(min_vertex, w, _g, false, &cb);
 
             degs.reg(w);
+            degs.update_queued();
         }
 
         timer_off();
     }
 
-    unsigned lower_bound_bagsize(){
-        return _lb+1u;
+    std::pair<unsigned, unsigned> get_bagsize() const{ untested();
+        return std::make_pair(_lb+1, -1);
+    }
+    std::pair<int, int> get_treewidth() const{ untested();
+        return std::make_pair(_lb, -2);
+    }
+    unsigned lower_bound_bagsize(){ untested();
+        return _lb+1;
     }
 
 private:
     G_t& _g;
-    unsigned _lb;
+    unsigned _lb; // the treewidth!
 };
 
 } //namespace impl
 
 
-
+// returns treewidth?!
 template <typename G_t>
 int deltaC_least_c(G_t& G)
 {
     unsigned int V = boost::num_vertices(G);
     unsigned int E = boost::num_edges(G);
 
-    if(V == 0){
+    if(V == 0){ untested();
         return -1;
-    }
-    else if(E == 0){
+    }else if(E == 0){ untested();
         return 0;
-    }
-    else if(2*E == V*(V-1u)){
+    }else if(2*E == V*(V-1u)){ untested();
         return V-1u;
-    }
-    else{
+    }else{ untested();
         impl::deltaC_least_c<G_t> deltaC_least_c(G);
         deltaC_least_c.do_it();
+        trace1("basize", deltaC_least_c.lower_bound_bagsize());
         return (int)deltaC_least_c.lower_bound_bagsize()-1;
     }
 }
@@ -1065,7 +1083,6 @@ int LBN_deltaC(G_t &G){
     return (int)LBN_deltaC.lower_bound_bagsize()-1;
 }
 
-
 namespace impl{
 
 template <typename G_t, typename CFG_t>
@@ -1129,7 +1146,7 @@ private:
 
 template <typename G_t>
 struct CFG_LBNC_deltaD{
-    static int lb_algo(G_t &H){
+    static int lb_algo(G_t &H){ untested();
         impl::deltaD<G_t> deltaD(H);
         deltaD.do_it();
         return (int)deltaD.lower_bound_bagsize() - 1;
@@ -1173,13 +1190,13 @@ int LBNC_deltaD(G_t const&G)
 
 template <typename G_t>
 struct CFG_LBNC_deltaC{
-    static int lb_algo(G_t &H){
+    static int lb_algo(G_t &H){ untested();
         impl::deltaC_least_c<G_t> deltaC(H);
         deltaC.do_it();
         return (int)deltaC.lower_bound_bagsize() - 1;
     }
 
-    static void improvement_algo(G_t &H, unsigned k){
+    static void improvement_algo(G_t &H, unsigned k){ untested();
         treedec::lb::k_neighbour_improved_graph(H, k);
     }
 
@@ -1232,6 +1249,7 @@ void k_path_improved_graph(G_t &G, unsigned int k){
                 std::vector<bool> disabled(boost::num_vertices(G), false);
                 unsigned int pos1 = get_pos(*vIt1, G);
                 unsigned int pos2 = get_pos(*vIt2, G);
+                assert(pos1!=pos2);
 
                 unsigned num_dis=0;
                 if(!disabled[pos1]) ++num_dis;
@@ -1258,7 +1276,7 @@ void k_path_improved_graph(G_t &G, unsigned int k){
 
 template <typename G_t>
 struct CFG_LBP_deltaD{
-    static int lb_algo(G_t &H){
+    static int lb_algo(G_t &H){ untested();
         impl::deltaD<G_t> deltaD(H);
         deltaD.do_it();
         return (int)deltaD.lower_bound_bagsize() - 1;
@@ -1284,9 +1302,9 @@ int LBP_deltaD(G_t &G)
         return -1;
     }else if(E == 0){
         return 0;
-    }else if(2*E == V*(V-1u)){
+    }else if(2*E == V*(V-1u)){ untested();
         return V-1u;
-    }else{
+    }else{ untested();
     }
 
     impl::LB_improved_base<G_t, CFG_LBP_deltaD<G_t> > LBP_deltaD(G);

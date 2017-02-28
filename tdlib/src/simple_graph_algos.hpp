@@ -31,6 +31,7 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include "graph.hpp"
+#include "error.hpp"
 
 namespace treedec{
 
@@ -193,10 +194,11 @@ bool is_edge_between_sets(G_t &G, vertex_set const& X, vertex_set const& Y)
     return edge(G, X.begin(), X.end(), Y.begin(), Y.end()).second;
 }
 
-template <typename G_t, typename It>
+// obsolete?
+template <typename G_t, typename It, typename C>
 inline void get_neighbourhood(G_t const &G, std::vector<bool> &disabled,
              It Xit, It Xend,
-             std::set<typename boost::graph_traits<G_t>::vertex_descriptor> &S_X)
+             C& S_X)
 {
     for(;Xit!=Xend; ++Xit){
         typename boost::graph_traits<G_t>::adjacency_iterator nIt, nEnd;
@@ -224,11 +226,11 @@ inline void get_neighbourhood(G_t &G, std::vector<bool> &disabled,
     return get_neighbourhood(G, disabled, X.begin(), X.end(), S_X);
 }
 
-template <typename G_t, typename B_t>
+template <typename G_t, class BV_t>
 void t_search_components(G_t const &G,
         typename boost::graph_traits<G_t>::vertex_descriptor vertex,
         std::vector<bool> &visited,
-        std::vector<B_t> &components,
+        BV_t& components,
         int comp_idx)
 {
     unsigned int pos = get_pos(vertex, G);
@@ -243,17 +245,18 @@ void t_search_components(G_t const &G,
     }
 }
 
-template <typename G_t, typename VB_t>
+// copy components of non-visited induced subgraph of G into BV_t.
+template <typename G_t, class BV_t>
 void get_components_provided_map(G_t const &G,
-             VB_t &components,
-             std::vector<bool> &visited){
-
+             BV_t &components,
+             std::vector<bool> &visited)
+{
     typename boost::graph_traits<G_t>::vertex_iterator vIt, vEnd;
     int comp_idx = -1;
     for(boost::tie(vIt, vEnd) = boost::vertices(G); vIt != vEnd; vIt++){
         unsigned int pos = get_pos(*vIt, G);
         if(!visited[pos]){
-            components.resize(components.size()+1);
+            components.push_back(typename BV_t::value_type());
             comp_idx++;
 
             components[comp_idx].insert(*vIt);
@@ -261,6 +264,7 @@ void get_components_provided_map(G_t const &G,
         }
     }
 }
+
 
 #if 0 // duplicates?
 

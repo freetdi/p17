@@ -302,6 +302,12 @@ bool sep_decomp(G_t const &G, T_t &T,
 {
     typedef typename boost::graph_traits<G_t>::vertex_descriptor vertex_descriptor;
     typedef typename std::set<vertex_descriptor> vertex_set;
+#if 0 // not yet
+    typedef typename std::vector<vertex_descriptor> vertex_vector;
+    typedef typename treedec_traits<T_t>::vd_type vd_type; // vertex identifier. possibly shorter than
+                                                           // vertex_descriptor
+    typedef typename std::set<vd_type> vd_set;             // just treedec bag_type?
+#endif
 
     //tw(G) > k - one could replace this with a better lower bound (see lower_bounds.hpp).
     if(boost::num_edges(G) > k*boost::num_vertices(G)){
@@ -321,6 +327,9 @@ bool sep_decomp(G_t const &G, T_t &T,
         treedec::map_descriptors_to_bags<G_t>(vertices, B1);
         treedec::sep_glue_bag(B1, B2, T);
         return true;
+    }else if(k==0){
+    }else if(k==1){
+    }else{
     }
 
     //Turn W into a superset of W of size 3k + 1.

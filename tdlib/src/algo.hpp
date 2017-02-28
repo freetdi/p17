@@ -24,6 +24,7 @@
 
 #include <limits>
 #include "timer.hpp"
+#include "graph_traits.hpp"
 
 namespace treedec{
 namespace algo{

@@ -1,6 +1,8 @@
 
 TESTS = $(LONG_TESTS) \
+	dclc_G5.py \
 	test_approx.py \
+	PP_K5.py \
 	test_apps.py \
 	test_bmd.py \
 	test_exact.py \
@@ -14,6 +16,7 @@ TESTS = $(LONG_TESTS) \
 	test_sep.py
 
 LONG_TESTS = \
+	test_long_pp_CFGs.py \
 	test_long_approx_CFGs.py \
 	test_long_apps_CFGs.py \
 	test_long_lb_CFGs.py \
@@ -21,7 +24,7 @@ LONG_TESTS = \
 	test_long_lb_Dimacs.py
 
 EXTRALONG_TESTS = \
-test_long_fi_Dimacs.py
+	test_long_fi_Dimacs.py
 
 # AM_PY_LOG_DRIVER_FLAGS=--short
 
@@ -38,6 +41,7 @@ TEST_EXTENSIONS = .py
 PY_LOG_COMPILER = $(PYTHON)
 AM_TESTS_ENVIRONMENT = \
     export PYTHONPATH='.:..:$(top_srcdir)/pytdlib';
+    REDIRECT='exec 2>&9';
 
 EXTRA_DIST = \
 	$(TESTS) \

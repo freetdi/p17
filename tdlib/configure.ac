@@ -100,6 +100,14 @@ AC_LANG_PUSH([C++])
 # unconditional c++11
 CXXFLAGS="$CXXFLAGS -std=c++11"
 
+have_gala=no
+AC_CHECK_HEADERS([gala/graph.h], [AC_DEFINE([HAVE_GALA], [1],
+                           [Define to 1 if you have gala])
+                            have_gala=yes ]
+									 AC_MSG_NOTICE([consider installing gala])
+						 )
+AM_CONDITIONAL([USE_GALA], [test $have_gala = yes ])
+
 AC_CHECK_HEADERS([stx/btree_set.h])
 AC_LANG_POP([C++])
 
@@ -129,6 +137,7 @@ AC_CONFIG_FILES([pytdlib/tests/Makefile])
 AC_CONFIG_FILES([src/Makefile])
 AC_CONFIG_FILES([src/impl/Makefile])
 AC_CONFIG_FILES([tests/Makefile])
+AC_CONFIG_FILES([grtd/Makefile])
 
 AC_OUTPUT
 
@@ -137,6 +146,7 @@ AC_MSG_RESULT([
 
    prefix:     $prefix
    python:     $python
+   gala:       $have_gala
    CPPFLAGS:   $CPPFLAGS
    CXXFLAGS:   $CXXFLAGS
 ])

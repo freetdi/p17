@@ -23,6 +23,11 @@
 #include <vector>
 #include "trace.hpp"
 
+#ifdef HAVE_STX_BTREE_SET_H
+#include <stx/btree_set>
+#endif
+
+
 namespace treedec{//
 
 namespace detail{//
@@ -74,47 +79,105 @@ namespace detail{//
     }; // access
     template<class C, class X=void>
     struct container_inspect{//
-        static bool contains(C& c, typename C::value_type e)
+        template<class E>
+        static bool contains(C const& c, E e)
         {
-          (void) c; (void) e;
-          incomplete();
-          return false;
+          return c.find(e)!=c.end();
         }
         // size?
         // is_ordered?
     };
+#ifndef NDEBUG // for now. (this is slow.)
+    template<class C>
+    struct container_inspect<C,
+      typename std::enable_if<
+        std::is_same<C, typename std::vector<
+        typename C::value_type,
+        typename C::allocator_type> >::value
+        >::type >{//
+        static bool contains(C const& c, typename C::value_type e)
+        { // incomplete();
+          return std::find(c.begin(), c.end(), e) != c.end();
+        }
+    };
+#endif
     template<class C, class X=void>
     struct container_modify{//
+        // push, insert new item
+        template<class E>
+        static void push(C& c, E e)
+        { untested();
+          // BUG: this code is used for grtdprinter, no "contains" there
+          // assert(!container_inspect<C>::contains(c, e));
+          c.push_back(e);
+        }
+        template<class B, class E>
+        static void push(C& c, B b, E e)
+        { untested();
+          // BUG: this code is used for grtdprinter, no "contains" there
+          // assert(!container_inspect<C>::contains(c, e));
+          while(b!=e){
+            c.push_back(*b);
+            ++b;
+          }
+        }
+        template<class E>
+        static void insert(C& c, E e)
+        { untested();
+          // BUG: this code is used for grtdprinter, no "contains" there
+          // assert(!container_inspect<C>::contains(c, e));
+          c.push_back(e);
+        }
+    };
+    template<class C>
+    struct container_modify<C,
+      typename std::enable_if<
+        std::is_same<C, typename std::set<
+        typename C::value_type,
+        typename C::key_compare,
+        typename C::allocator_type> >::value
+        >::type >{//
         // push, insert new item
         static void push(C& c, typename C::value_type e)
         {
           assert(!container_inspect<C>::contains(c, e));
           c.insert(e);
         }
-        static void insert(C& c, typename C::value_type e)
+        template<class I>
+        static void push(C& c, I b, I e)
         {
+          while(b!=e){
+            c.insert(*b);
+            ++b;
+          }
+        }
+        static void insert(C& c, typename C::value_type e)
+        { itested();
           c.insert(e);
         }
     };
+#ifdef HAVE_STX_BTREE_SET_H
     template<class C>
     struct container_modify<C,
       typename std::enable_if<
-        std::is_same<C, typename std::vector<
-        typename C::value_type,
+        std::is_same<C, stx::btree_set<
+        typename C::key_type,
+        typename C::key_compare,
+        typename C::traits,
         typename C::allocator_type> >::value
         >::type >{//
         // push, insert new item
         static void push(C& c, typename C::value_type e)
         { untested();
           assert(!container_inspect<C>::contains(c, e));
-          c.push_back(e);
+          c.insert(e);
         }
         static void insert(C& c, typename C::value_type e)
-        { untested();
-          assert(!container_inspect<C>::contains(c, e));
+        { itested();
           c.insert(e);
         }
     };
+#endif
 } // detail
 
 } // namespace treedec

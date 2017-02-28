@@ -27,12 +27,14 @@ check_PROGRAMS = \
 	bucket_sorter_1 \
 	bucket_sorter_2 \
 	bucket_sorter_2u \
+	bucket_sorter_3 \
 	common_out_edges \
+	bfs \
+	dfs \
 	vec2tree
 
-# these fail. known bug...
+# bug/issue in upstream boost
 XFAIL_TESTS = \
-	bucket_sorter_2 \
 	bucket_sorter_2u
 
 notyets = \
@@ -40,8 +42,8 @@ notyets = \
 	onion \
 	gala_bmd \
 	gala_hw \
-	dfs \
-	bfs
+	onion \
+	svbs_random
 
 TESTS = $(check_PROGRAMS)
 
@@ -55,5 +57,5 @@ AM_CXXFLAGS = -O0 -g
 tdlib:
 	-ln -sf $(top_srcdir)/src tdlib
 
-# EXTRA_DIST = \
-# 	svbs_random.h
+EXTRA_DIST = \
+	svbs_random.h
