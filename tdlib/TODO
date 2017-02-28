@@ -1,0 +1,6 @@
+- cleanup interfaces
+- release 1.0
+- provide meta heuristic for treewidth
+- parallelize exact_cutset?
+- solvers as (callable/extensible) classes
+- more treedecomposition structures
