@@ -144,10 +144,14 @@ protected: // run time config
 		static void interruption_point(){ itested();
 			boost::this_thread::interruption_point();
 		}
-		static void commit_ub(unsigned x){ itested();
+		static void commit_ub(unsigned x, std::string reason=""){ itested();
 			// TODO: cleaner.
 			// how to get rid of dictionary??
-			CFG::message(bDEBUG, "thread received upper bound %d\n", x);
+			if(reason!=""){
+				reason=", "+reason;
+			}else{
+			}
+			CFG::message(bLOG, "thread received upper bound %d%s\n", x, reason.c_str());
 			std::stringstream ss;
 			ss << boost::this_thread::get_id();
 			auto twt=TWTHREAD_BASE::_global_maphack[ss.str()];
@@ -168,14 +172,14 @@ public:
 		 // create idle thread..
 		trace2("TWTHREAD idle", &g, &_g);
 		trace2("TWTHREAD idle", boost::num_vertices(_g), boost::num_edges(_g));
-		CFG::message(0, "starting idle twthread %s, %p\n", _name.c_str(), this);
+		CFG::message(bLOG, "starting idle twthread %s, %p\n", _name.c_str(), this);
 		_result_lock = new std::lock_guard<std::mutex>(_tw_mutex);
 	}
 	TWTHREAD(G const& g, std::string const& name)
 		 : _g(g), _name(name)
 	{ untested();
 		_result=-1u;
-		CFG::message(0, "starting twthread %s, %p\n", _name.c_str(), this);
+		CFG::message(bLOG, "starting twthread %s, %p\n", _name.c_str(), this);
 		_result_lock = new std::lock_guard<std::mutex>(_tw_mutex);
 		go(); // hmm should wait for child class constructor?
 	}

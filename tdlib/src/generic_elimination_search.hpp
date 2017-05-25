@@ -161,6 +161,8 @@ private:
 private: // import baseclass stuff
     using baseclass::_g;
     using baseclass::_depth;
+    using baseclass::_global_ub;
+    using baseclass::_global_lb;
 public:
     // too many args
     generic_elimination_search_DFS(overlay<G_t, G_t> &Overlay,
@@ -253,6 +255,7 @@ void generic_elimination_search_DFS<G_t, OC, CFGT_t>::do_it()
     baseclass::timer_on();
 
     if(baseclass::_depth == 0){
+        // BUG: pass upper bound?!
         unsigned tmp_global_lb = OC::initial_lb_algo(baseclass::_g.underlying());
         if(tmp_global_lb > baseclass::_global_lb){
             baseclass::_global_lb = tmp_global_lb;
@@ -267,10 +270,11 @@ void generic_elimination_search_DFS<G_t, OC, CFGT_t>::do_it()
         baseclass::found_ub(tmp_global_ub);
 
 
-        CFG_t::message(bLOG, "initial ub: %d\n", baseclass::_global_ub);
+//        CFG_t::message(bLOG, "initial ub: %d\n", baseclass::_global_ub);
+        CFG_t::commit_ub(_global_ub, "initial ub");
 
         // baseclass::bagsize_range().size()==1...?
-        if(baseclass::_global_lb == baseclass::_global_ub){
+        if(_global_lb == baseclass::_global_ub){
             CFG_t::message(0, "finished: initial lower bound == initial upper bound\n");
             ++baseclass::_orderings_generated; //not necessary..
 
@@ -289,8 +293,7 @@ void generic_elimination_search_DFS<G_t, OC, CFGT_t>::do_it()
         CFG_t::message(0, "better ordering of bs %d\n", local_ub);
         baseclass::_global_ub = local_ub; // BUG
         baseclass::_best_ordering = baseclass::_current_ordering; // BUG
-        CFG_t::commit_ub(local_ub);
-        CFG_t::message(0, "updated global_ub to %d\n", baseclass::_global_ub );
+        CFG_t::commit_ub(local_ub, "leaf");
 
         ++baseclass::_orderings_generated; //ifdef stats?!
 

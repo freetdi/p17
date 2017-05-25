@@ -9,10 +9,11 @@ bootstrap-stamp: tdlib/configure.ac
 
 config-stamp: bootstrap-stamp
 	-mkdir build
-	cd build; ../tdlib/configure CPPFLAGS="$(INCLUDES) -Dincomplete\(\)"
+	cd build; ../tdlib/configure --without-python CPPFLAGS="$(INCLUDES) -Dunreachable\(\) -Dincomplete\(\)" CXXFLAGS=-O3
 	touch $@
 
 grtd-stamp: config-stamp
 	$(MAKE) -C build/grtd tdlib
+	-(cd build/grtd; ln -s ../../gala)
 	$(MAKE) -C build/grtd grtd
 	touch $@

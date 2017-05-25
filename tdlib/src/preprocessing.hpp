@@ -271,9 +271,10 @@ public:
         return _lb_bs;
     }
     template<class Iter>
-    void paste_elims(Iter& i) { // for now
+    void paste_elims(Iter& i, Iter e) { // for now
         auto b=_elims.begin();
         for(; b!=_elims.end(); ++b){
+            assert(i!=e);
             *i = *b;
             ++i;
         }
@@ -359,7 +360,7 @@ public:
             if(_numbering.is_numbered(*p.first)){ itested();
                 continue; // fixme. not here.
                           // use induced subgraph, or boost::filtered_graph.
-            }else{ untested();
+            }else{ itested();
                 assert(seek<m.size());
                 pm[*p.first] = seek;
                 m[seek++] = *p.first;

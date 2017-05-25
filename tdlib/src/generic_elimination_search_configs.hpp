@@ -300,6 +300,7 @@ struct CFG_DFS_3 : generic_elimination_search_DFS<G_t, CFG_DFS_3<G_t, cfg>, cfg>
 template <typename G_t, template<class G, class ...> class CFGT>
 struct CFG_DFS_p17 : generic_elimination_search_DFS<G_t, CFG_DFS_p17<G_t, CFGT>, CFGT> {
     typedef generic_elimination_search_DFS<G_t, CFG_DFS_p17<G_t, CFGT>, CFGT> baseclass;
+    typedef typename boost::graph_traits<G_t>::vertices_size_type vertices_size_type;
     typedef CFGT<G_t> CFG;
     CFG_DFS_p17(G_t const& G) : baseclass(G)
     {
@@ -331,9 +332,18 @@ struct CFG_DFS_p17 : generic_elimination_search_DFS<G_t, CFG_DFS_p17<G_t, CFGT>,
     }
 
     // returns bagsize
+    // p17::
     static unsigned initial_ub_algo(const G_t &G, std::vector<vd> &O)
     {
-        G_t H(G);
+        vertices_size_type best;
+        {
+            for(unsigned i = 0; i < boost::num_vertices(G); ++i){
+                O[i] = i;
+            }
+            G_t H2(G);
+            best=treedec::get_bagsize_of_elimination_ordering(H2, O);
+            CFG::message(bDEBUG, "initial ub n %d\n", best);
+        }
 #if 0
         // static_assert(sizeof(vd)==sizeof(int)); no.
         std::vector<int> O2(O.begin(), O.end()); // bmd wants vector<int>, why?!
@@ -343,9 +353,19 @@ struct CFG_DFS_p17 : generic_elimination_search_DFS<G_t, CFG_DFS_p17<G_t, CFGT>,
         O.assign(O2.begin(), O2.end());
         return bs;
 #else
-        auto initial_bagsize_ub=treedec::fillIn_ordering(H, O)+1;
-        CFG::message(bDEBUG, "initial ub %d\n", initial_bagsize_ub);
-        return initial_bagsize_ub;
+        G_t H(G);
+        auto fi_bs=treedec::fillIn_ordering(H, O)+1;
+        CFG::message(bDEBUG, "initial ub f %d\n", fi_bs);
+
+        if(best<fi_bs){
+            for(unsigned i = 0; i < boost::num_vertices(G); ++i){
+                O[i] = i;
+            }
+        }else{
+            best = fi_bs;
+        }
+        // why not try bmd as well?!
+        return best;
 #endif
     }
 

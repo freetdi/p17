@@ -1,18 +1,47 @@
+CONTENTS
+
 PACE17/A [1] submission -- tdlib/experimental and gala snapshot
 
-"make" should build everything needed to run ./tw-exact and ./tw-heuristic
+USAGE/SYNOPSIS
 
+"make" should build everything needed to run ./tw-exact and ./tw-heuristic.
+
+these programs read a ".gr" file from stdin, and print a ".td" file to stdout.
 ./tw-exact terminates after finish, ./tw-heuristic will wait for a TERM
-signal.
+signal. -L -D -T flags switches on logging/debugging/tracing.
 
 TW-EXACT
 
-is basically Hisao Tamakis implementation that won last year, ported to C++11
-and boost/gala/tdlib. The development has been discontinued in favor of
-tw-heuristic.
+is basically Hisao Tamakis implementation that won last year. It has been ported
+to C++11 and boost/gala/tdlib. It is now ran after the tdlib preprocessor. The
+development has been discontinued in favor of tw-heuristic.
 
 TW-HEURISTIC
 
-An exaustive but guided brute force search over elimination orderings.
+Performs rule based Preprocessing followed by an exaustive but guided brute
+force search over elimination orderings. Lower bounds computed by
+deltaC_leastC are used to cut off branches. minimalChordal is used to refine
+orderings.
+
+EXAMPLE
+
+$ make
+[..]
+$ ./tw-exact < tdlib/grtd/HoffmanGraph.gr
+[..]
+$ ./tw-heuristic < tdlib/grtd/HoffmanGraph.gr & p=$!; sleep 1; kill $p
+
+BUGS
+
+signal handling
+- too early TERM might not be handled right.
+- reaction to TERM may be late.
+
+package
+the embedded tdlib package is incomplete and experimental. the proposed
+algorithms, subroutines and executables will be made fully available in a
+future version of tdlib.
+
+REFERENCES
 
 [1] https://pacechallenge.wordpress.com/pace-2017/track-a-treewidth/

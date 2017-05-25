@@ -128,7 +128,7 @@ private:
 public:
 
     TA_THREAD(G& g, const std::string& name="TA")
-        : base(g, name, 0), _testg(g)
+        : base(g, name, 0)// , _testg(g)
     {
         treedec::check(g);
         /// std::cerr << "orig\n";
@@ -173,7 +173,7 @@ public:
 private:
 //   result_t _result;
     T _t;
-    G const& _testg;
+//    G const& _testg;
 };
 
 

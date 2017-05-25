@@ -110,11 +110,14 @@ public:
     virtual void do_it() = 0;
 
 	 std::vector<vd> const& ordering() { return _best_ordering; }
-    template<class Iter>
-    void paste_ordering(Iter& i) { // for now
+    template<class Iter, class maphack>
+    void paste_ordering(Iter& i, Iter e, maphack const& m) { // for now
+		 (void) e;
         auto b=_best_ordering.begin();
         for(; b!=_best_ordering.end(); ++b){
-            *i = *b;
+				assert(i<e);
+            assert(*b<m.size());
+            *i = m[*b];
             ++i;
         }
     }

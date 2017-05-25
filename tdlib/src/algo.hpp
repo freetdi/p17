@@ -89,10 +89,10 @@ struct config_base{
     static void interruption_point(){
         // compile-time disabled signalling
     }
-    static void commit_lb(unsigned){ untested();
+    static void commit_lb(unsigned, std::string=""){ untested();
         // 
     }
-    static void commit_ub(unsigned){ untested();
+    static void commit_ub(unsigned, std::string=""){ untested();
         // 
     }
     // "C" style seems to be most practical.

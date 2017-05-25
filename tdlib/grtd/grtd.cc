@@ -179,8 +179,8 @@ enum mag_t{
 // fixme: move to other compilation unit
 #include <stdarg.h>
 #include <stdio.h>
-int errorlevel;
-template<class X, class ... rest>
+int errorlevel=bLOG;
+template<class X=balu_t, class ... rest>
 struct grtd_algo_config : treedec::algo::default_config<X, rest...>{
     // print with "c "
     static void message(int badness, const char* fmt, ...)
@@ -616,7 +616,7 @@ void twh(PARSE*p, mag_t m, unsigned mask)
     G16 g16;
     G32 g32;
 
-    if(m>M16){ untested();
+    if(m>M15){ untested();
         G32p pg32(p->begin(), p->end(), p->num_vertices(), p->num_edges());
         g32 = std::move(pg32);
         assert(boost::num_edges(g32)==p->num_edges()); // usually.
@@ -685,7 +685,8 @@ void twh(PARSE*p, mag_t m, unsigned mask)
 /*--------------------------------------------------------------------------*/
 #ifdef USE_P17
     if(! ( mask & ( 1 << nP17 ))) {
-    }else if( m <= M16){ untested();
+    }else if( m < M16){ untested();
+        // need "less than M16", due to bucket sorter quirk
         threads[nP17] = new P17_THREAD<G16, grtd_algo_config>(g16, "P17_16");
     }else{ untested();
         threads[nP17] = new P17_THREAD<G32, grtd_algo_config>(g32, "P17_32");
@@ -716,7 +717,7 @@ void twh(PARSE*p, mag_t m, unsigned mask)
 /*--------------------------------------------------------------------------*/
 #if defined(USE_TA) && defined(USE_GALA)
     if(! ( mask & ( 1 << nTA ))) { untested();
-    }else if(m > M16){ untested();
+    }else if(m > M15){ untested();
         // does this even make sense?
         // maybe for very sparse graphs...
         // threads[nTA] = new TA_THREAD<G32>(boost::ref(g32), "TA32");
@@ -772,6 +773,7 @@ void twh(PARSE*p, mag_t m, unsigned mask)
 
     unsigned best_tid=find_best(threads);
     trace2("found best", best_tid, names[best_tid]);
+    grtd_algo_config<balu_t>::message(bDEBUG, "best: %s\n", names[best_tid].c_str());
 
     if(quiet){ untested();
     }else{
@@ -782,11 +784,10 @@ void twh(PARSE*p, mag_t m, unsigned mask)
 #ifdef USE_GALA // tmp hack
             // g.make_symmetric(true);
 #endif
-        default: untested();
+        default: itested();
             threads[best_tid]->interrupt(); // uuh, wait here until copy is finished?!
-                 untested();
+            grtd_algo_config<balu_t>::message(bDEBUG, "printing result\n");
             threads[best_tid]->print_results(std::cout);
-                 untested();
             break;
         case nTOTAL:
             std::cout << "no result\n";

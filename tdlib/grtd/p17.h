@@ -9,6 +9,7 @@ template<class G, template<class H, class ... > class cfgt=treedec::algo::defaul
 class P17_THREAD : public TWTHREAD<G, cfgt> {
 public:
     using vertex_descriptor=typename boost::graph_traits<G>::vertex_descriptor;
+    using vertices_size_type=typename boost::graph_traits<G>::vertices_size_type;
     typedef TWTHREAD<G, cfgt> base;
     typedef cfgt<G> CFG;
     typedef std::vector<vertex_descriptor> iorder_t;
@@ -22,6 +23,12 @@ public:
         : base(g, name, 0)
         // _input_reference(g)
     { untested();
+        long long m=std::numeric_limits<vertices_size_type>::max();
+        CFG::message(bDEBUG, "running with maxnodes %lld\n", m);
+
+        auto nv=boost::num_vertices(g);
+        assert(nv<=m);
+
         // TODO: should not need _input_reference.
         // then, use base(g,name) instead.
         base::go();
@@ -47,7 +54,7 @@ public:
         { // HACK. bug.
             PP.do_it();
             PP.get_subgraph_copy(g2, m);
-            PP.paste_elims(ie);
+            PP.paste_elims(ie, _elimord.end());
         }
 
         algo_type generic_elim_DFS_test(g2);
@@ -59,15 +66,16 @@ public:
             CFG::message(bDEBUG, "interrupt\n");
         }
 
-        generic_elim_DFS_test.paste_ordering(ie);
+        generic_elim_DFS_test.paste_ordering(ie, _elimord.end(), m);
         size_t A=generic_elim_DFS_test.global_upper_bound_bagsize(); // does not work
 
 #if 1 // BUG, but where?!
         _work=base::_g;
         // _work.make_symmetric(true);
+        assert_permutation(_elimord);
         size_t B=treedec::get_bagsize_of_elimination_ordering(_work, _elimord);
         if(A!=B){ unreachable();
-            CFG::message(0, "? %d %d\n", A, B);
+            CFG::message(bWARNING, "bug? %d %d\n", A, B);
         }else{
         }
 #endif
